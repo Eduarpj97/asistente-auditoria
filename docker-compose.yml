@@ -1,0 +1,6 @@
+services:
+  web-test:
+    image: nginx:alpine
+    container_name: auditoria_web_test
+    ports:
+      - "8080:80"
