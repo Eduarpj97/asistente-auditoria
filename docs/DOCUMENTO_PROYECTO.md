@@ -5,7 +5,7 @@
 
 **Autor**: Eduardo Pedroza, Daysmir Hugueth, Antonio Guerrero
 
-**Usuario GitHub / Docker Hub**: eduarpj  
+**Usuario GitHub / Docker Hub**: @eduarpj  
 **Área Temática**: Inteligencia Artificial Aplicada, Procesamiento de Lenguaje Natural (NLP), Ingeniería de Software  
 **Fecha**: Septiembre de 2026  
 
