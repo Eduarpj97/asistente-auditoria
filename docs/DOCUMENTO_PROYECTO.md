@@ -4,6 +4,7 @@
 *Asistente Inteligente de Auditoría y Cumplimiento Regulatorio para Contratos Financieros y de Software*
 
 **Autor**: Eduardo Pedroza, Daysmir Hugueth, Antonio Guerrero
+
 **Usuario GitHub / Docker Hub**: eduarpj  
 **Área Temática**: Inteligencia Artificial Aplicada, Procesamiento de Lenguaje Natural (NLP), Ingeniería de Software  
 **Fecha**: Septiembre de 2026  
