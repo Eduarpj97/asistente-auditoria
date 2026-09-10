@@ -1,13 +1,13 @@
 # MODELADO DE PROCESOS DE NEGOCIO (BPMN 2.0)
 
-**Proyecto**: Asistente de AuditorÌa y Cumplimiento Regulatorio para Contratos  
-**Autor**: Eduardo (@Eduarpj97)  
-**VersiÛn**: 1.0  
+**Proyecto**: Asistente de Auditor√≠a y Cumplimiento Regulatorio para Contratos  
+**Autor**: Eduardo Pedroza, Daysmir Hugueth, Antonio Guerrero (@Eduarpj97)  
+**Versi√≥n**: 1.0  
 
 ---
 
-## 1. Contexto del Negocio y MetodologÌa
-Para fundamentar el impacto y retorno de inversiÛn (ROI) del proyecto en la memoria de grado, se modela el proceso de auditorÌa contractual en dos estados:
+## 1. Contexto del Negocio y Metodolog√≠a
+Para fundamentar el impacto y retorno de inversi√≥n (ROI) del proyecto en la memoria de grado, se modela el proceso de auditor√≠a contractual en dos estados:
 1. **Proceso AS-IS (Estado Actual)**: Proceso manual tradicional llevado a cabo por asesores legales o personal administrativo en pymes.
 2. **Proceso TO-BE (Estado Propuesto)**: Proceso optimizado y acelerado mediante el Asistente con Inteligencia Artificial.
 
@@ -17,25 +17,25 @@ Para fundamentar el impacto y retorno de inversiÛn (ROI) del proyecto en la memo
 
 \\\mermaid
 flowchart TD
-    Inicio([?? Inicio: Contrato recibido]) --> T1[RecepciÛn y radicaciÛn del PDF o documento impreso]
-    T1 --> T2[AsignaciÛn manual a abogado o analista legal]
-    T2 --> T3[Lectura secuencial manual del contrato completo (20-50 p·gs)]
-    T3 --> T4[B˙squeda e identificaciÛn manual de cl·usulas crÌticas]
-    T4 --> T5[Cotejo manual contra est·ndares de la empresa o legislaciÛn]
-    T5 --> G1{øDudas o tÈrminos ambiguos?}
-    G1 -- SÌ --> T6[Reuniones de consulta o re-lectura cruzada]
-    T6 --> T7[RedacciÛn manual del dictamen en procesador de texto]
+    Inicio([?? Inicio: Contrato recibido]) --> T1[Recepci√≥n y radicaci√≥n del PDF o documento impreso]
+    T1 --> T2[Asignaci√≥n manual a abogado o analista legal]
+    T2 --> T3[Lectura secuencial manual del contrato completo (20-50 p√°gs)]
+    T3 --> T4[B√∫squeda e identificaci√≥n manual de cl√°usulas cr√≠ticas]
+    T4 --> T5[Cotejo manual contra est√°ndares de la empresa o legislaci√≥n]
+    T5 --> G1{¬øDudas o t√©rminos ambiguos?}
+    G1 -- S√≠ --> T6[Reuniones de consulta o re-lectura cruzada]
+    T6 --> T7[Redacci√≥n manual del dictamen en procesador de texto]
     G1 -- No --> T7
-    T7 --> T8[RevisiÛn y firma manual del dictamen]
+    T7 --> T8[Revisi√≥n y firma manual del dictamen]
     T8 --> Fin([?? Fin: Informe entregado con demora])
 
     classDef danger fill:#fee2e2,stroke:#ef4444,stroke-width:2px;
     class T3,T4,T5,T6 danger;
 \\\
 
-> **Puntos CrÌticos del Proceso AS-IS**:
+> **Puntos Cr√≠ticos del Proceso AS-IS**:
 > - ? **Tiempo promedio**: De 24 a 72 horas por contrato.
-> - ?? **Riesgo de omisiÛn**: Fatiga visual del revisor ante documentos de alta extensiÛn.
+> - ?? **Riesgo de omisi√≥n**: Fatiga visual del revisor ante documentos de alta extensi√≥n.
 > - ?? **Costo elevado**: Dependencia absoluta de horas/hombre de especialistas legales.
 
 ---
@@ -51,17 +51,17 @@ sequenceDiagram
     participant IA as ?? Motor IA (RAG / Ollama)
 
     Auditor->>Web: Carga contrato en formato PDF
-    Web->>API: EnvÌa documento vÌa REST (multipart/form-data)
-    Note over API: Valida formato, tamaÒo y extrae texto plano
-    API->>IA: EnvÌa fragmentos de texto + matriz de reglas normativas
-    Note over IA: An·lisis sem·ntico, detecciÛn de riesgos y scoring
-    IA-->>API: Retorna JSON estructurado (Cl·usulas, Riesgo, Citas textuales)
-    API-->>Web: EnvÌa diagnÛstico para renderizar
-    Web-->>Auditor: Muestra sem·foro (??/??/??) y resumen interactivo
+    Web->>API: Env√≠a documento v√≠a REST (multipart/form-data)
+    Note over API: Valida formato, tama√±o y extrae texto plano
+    API->>IA: Env√≠a fragmentos de texto + matriz de reglas normativas
+    Note over IA: An√°lisis sem√°ntico, detecci√≥n de riesgos y scoring
+    IA-->>API: Retorna JSON estructurado (Cl√°usulas, Riesgo, Citas textuales)
+    API-->>Web: Env√≠a diagn√≥stico para renderizar
+    Web-->>Auditor: Muestra sem√°foro (??/??/??) y resumen interactivo
     
     alt Auditor valida hallazgos
         Auditor->>Web: Aprueba o ajusta observaciones (Human-in-the-loop)
-        Web->>API: Solicita generaciÛn de reporte final
+        Web->>API: Solicita generaci√≥n de reporte final
         API-->>Web: Entrega PDF/Executive Summary
         Web-->>Auditor: Descarga informe listo para gerencia
     end
@@ -73,30 +73,30 @@ sequenceDiagram
 flowchart TD
     subgraph Lane_Usuario [" Carril: Auditor Legal "]
         Start([?? Inicio: Contrato listo]) --> B1[Arrastra PDF a la plataforma web]
-        B6[Revisa tablero visual y sem·foro de riesgo]
-        B7{øRequiere ajuste manual?}
-        B8[Modifica nivel o agrega nota jurÌdica]
+        B6[Revisa tablero visual y sem√°foro de riesgo]
+        B7{¬øRequiere ajuste manual?}
+        B8[Modifica nivel o agrega nota jur√≠dica]
         B9[Descarga informe ejecutivo final]
-        EndNode([?? Fin: AuditorÌa completada])
+        EndNode([?? Fin: Auditor√≠a completada])
     end
 
     subgraph Lane_Sistema [" Carril: Plataforma Web & Backend "]
         B1 --> S1[Recibe PDF y extrae contenido textual]
-        S1 --> S2[Segmenta texto en cl·usulas y secciones]
-        S3[Calcula Ìndice consolidado de severidad]
+        S1 --> S2[Segmenta texto en cl√°usulas y secciones]
+        S3[Calcula √≠ndice consolidado de severidad]
         S3 --> B6
-        B7 -- SÌ --> B8
+        B7 -- S√≠ --> B8
         B8 --> S4[Actualiza dictamen con cambios de auditor]
-        B7 -- No --> S5[Consolida dictamen est·ndar]
+        B7 -- No --> S5[Consolida dictamen est√°ndar]
         S4 --> B9
         S5 --> B9
         B9 --> EndNode
     end
 
     subgraph Lane_IA [" Carril: Motor de Inteligencia Artificial "]
-        S2 --> IA1[B˙squeda RAG de cl·usulas crÌticas en BD normativa]
-        IA1 --> IA2[EvaluaciÛn de SLA, penalidades, rescisiÛn y privacidad]
-        IA2 --> IA3[Genera respuestas en JSON con citas de p·gina y riesgo]
+        S2 --> IA1[B√∫squeda RAG de cl√°usulas cr√≠ticas en BD normativa]
+        IA1 --> IA2[Evaluaci√≥n de SLA, penalidades, rescisi√≥n y privacidad]
+        IA2 --> IA3[Genera respuestas en JSON con citas de p√°gina y riesgo]
         IA3 --> S3
     end
 
@@ -106,12 +106,12 @@ flowchart TD
 
 ---
 
-## 4. Matriz Comparativa de Eficiencia (MÈtrica para SustentaciÛn)
+## 4. Matriz Comparativa de Eficiencia (M√©trica para Sustentaci√≥n)
 
-| MÈtrica de Rendimiento | Proceso AS-IS (Manual) | Proceso TO-BE (Plataforma IA) | Beneficio / Mejora |
+| M√©trica de Rendimiento | Proceso AS-IS (Manual) | Proceso TO-BE (Plataforma IA) | Beneficio / Mejora |
 |---|---|---|---|
-| **Tiempo de revisiÛn inicial** | 180 a 360 minutos | Menos de 2 minutos | **ReducciÛn > 95%** |
-| **DetecciÛn de cl·usulas ocultas** | Dependiente de fatiga humana (~70-85%) | DetecciÛn determinista con IA (> 95%) | **Mayor cobertura y rigor** |
-| **Costo por contrato auditado** | Alto (horas profesionales) | Costo computacional mÌnimo (Ollama gratis) | **Ahorro econÛmico dr·stico** |
-| **EstandarizaciÛn del informe** | Formatos dispares seg˙n el redactor | Reporte unificado con sem·foro est·ndar | **Consistencia institucional** |
+| **Tiempo de revisi√≥n inicial** | 180 a 360 minutos | Menos de 2 minutos | **Reducci√≥n > 95%** |
+| **Detecci√≥n de cl√°usulas ocultas** | Dependiente de fatiga humana (~70-85%) | Detecci√≥n determinista con IA (> 95%) | **Mayor cobertura y rigor** |
+| **Costo por contrato auditado** | Alto (horas profesionales) | Costo computacional m√≠nimo (Ollama gratis) | **Ahorro econ√≥mico dr√°stico** |
+| **Estandarizaci√≥n del informe** | Formatos dispares seg√∫n el redactor | Reporte unificado con sem√°foro est√°ndar | **Consistencia institucional** |
 | **Seguridad y Confidencialidad** | Manejo de copias impresas o correos | Inferencia local privada en servidor interno | **Cumplimiento estricto de privacidad** |
