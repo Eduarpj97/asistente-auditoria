@@ -1,48 +1,48 @@
-# DOCUMENTO DE PROPUESTA Y MEMORIA T…CNICA DE PROYECTO DE GRADO
+# DOCUMENTO DE PROPUESTA Y MEMORIA T√âCNICA DE PROYECTO DE GRADO
 
-**TÌtulo del Proyecto**:  
-*Asistente Inteligente de AuditorÌa y Cumplimiento Regulatorio para Contratos Financieros y de Software*
+**T√≠tulo del Proyecto**:  
+*Asistente Inteligente de Auditor√≠a y Cumplimiento Regulatorio para Contratos Financieros y de Software*
 
-**Autor**: Eduardo  
-**Usuario GitHub / Docker Hub**: @eduarpj  
-**¡rea Tem·tica**: Inteligencia Artificial Aplicada, Procesamiento de Lenguaje Natural (NLP), IngenierÌa de Software  
+**Autor**: Eduardo Pedroza, Daysmir Hugueth, Antonio Guerrero 
+**Usuario GitHub / Docker Hub**: eduarpj  
+**√Årea Tem√°tica**: Inteligencia Artificial Aplicada, Procesamiento de Lenguaje Natural (NLP), Ingenier√≠a de Software  
 **Fecha**: Septiembre de 2026  
 
 ---
 
-## 1. INTRODUCCI”N Y PLANTEAMIENTO DEL PROBLEMA
+## 1. INTRODUCCI√ìN Y PLANTEAMIENTO DEL PROBLEMA
 
 ### 1.1. Contexto
-En el ecosistema empresarial actual, las pequeÒas y medianas empresas (pymes), asÌ como organizaciones financieras y tecnolÛgicas, gestionan cotidianamente decenas de contratos crÌticos: Acuerdos de Nivel de Servicio (SLA), licencias de software como servicio (SaaS), contratos de confidencialidad (NDA) y cl·usulas de responsabilidad civil.
+En el ecosistema empresarial actual, las peque√±as y medianas empresas (pymes), as√≠ como organizaciones financieras y tecnol√≥gicas, gestionan cotidianamente decenas de contratos cr√≠ticos: Acuerdos de Nivel de Servicio (SLA), licencias de software como servicio (SaaS), contratos de confidencialidad (NDA) y cl√°usulas de responsabilidad civil.
 
 ### 1.2. Planteamiento del Problema
-La revisiÛn de estos documentos se realiza tradicionalmente de forma manual. Este procedimiento adolece de tres debilidades fundamentales:
-1. **Consumo excesivo de tiempo**: Analizar un contrato extenso de 20 a 50 p·ginas requiere entre 3 y 8 horas de lectura detallada.
-2. **Alta probabilidad de error por fatiga**: TÈrminos ambiguos, renovaciones autom·ticas no deseadas o penalidades desproporcionadas pasan desapercibidas.
-3. **Costo prohibitivo**: La contrataciÛn permanente o tercerizada de bufetes legales especializados resulta inaccesible para la mayorÌa de pymes.
+La revisi√≥n de estos documentos se realiza tradicionalmente de forma manual. Este procedimiento adolece de tres debilidades fundamentales:
+1. **Consumo excesivo de tiempo**: Analizar un contrato extenso de 20 a 50 p√°ginas requiere entre 3 y 8 horas de lectura detallada.
+2. **Alta probabilidad de error por fatiga**: T√©rminos ambiguos, renovaciones autom√°ticas no deseadas o penalidades desproporcionadas pasan desapercibidas.
+3. **Costo prohibitivo**: La contrataci√≥n permanente o tercerizada de bufetes legales especializados resulta inaccesible para la mayor√≠a de pymes.
 
 ---
 
-## 2. JUSTIFICACI”N
-El uso de modelos de lenguaje avanzados (LLMs) combinados con arquitecturas de recuperaciÛn de informaciÛn (RAG - Retrieval-Augmented Generation) y modelos locales de cÛdigo abierto (Ollama) permite democratizar la auditorÌa contractual. 
+## 2. JUSTIFICACI√ìN
+El uso de modelos de lenguaje avanzados (LLMs) combinados con arquitecturas de recuperaci√≥n de informaci√≥n (RAG - Retrieval-Augmented Generation) y modelos locales de c√≥digo abierto (Ollama) permite democratizar la auditor√≠a contractual. 
 
-Asimismo, la implementaciÛn de modelos en entornos locales (on-premise / edge) garantiza la **confidencialidad de los datos corporativos**, evitando que informaciÛn contractual sensible viaje a servidores de terceros en la nube, satisfaciendo estrictas regulaciones de privacidad de datos (GDPR / legislaciones locales).
+Asimismo, la implementaci√≥n de modelos en entornos locales (on-premise / edge) garantiza la **confidencialidad de los datos corporativos**, evitando que informaci√≥n contractual sensible viaje a servidores de terceros en la nube, satisfaciendo estrictas regulaciones de privacidad de datos (GDPR / legislaciones locales).
 
 ---
 
 ## 3. OBJETIVOS
 
 ### 3.1. Objetivo General
-DiseÒar, desarrollar e implementar una plataforma web asistida por Inteligencia Artificial capaz de auditar contratos financieros y licencias de software en formato PDF, extrayendo cl·usulas crÌticas, detectando riesgos normativos y presentando un diagnÛstico ejecutivo estructurado.
+Dise√±ar, desarrollar e implementar una plataforma web asistida por Inteligencia Artificial capaz de auditar contratos financieros y licencias de software en formato PDF, extrayendo cl√°usulas cr√≠ticas, detectando riesgos normativos y presentando un diagn√≥stico ejecutivo estructurado.
 
-### 3.2. Objetivos EspecÌficos
+### 3.2. Objetivos Espec√≠ficos
 1. **Configurar un entorno de desarrollo reproducible** basado en contenedores Docker y Docker Compose para backend, frontend y motores auxiliares.
 2. **Modelar los procesos de negocio y requerimientos del sistema** mediante diagramas de Casos de Uso (UML) y mapas de proceso BPMN (AS-IS y TO-BE).
-3. **Evaluar y comparar tÈcnica y experimentalmente** dos enfoques de procesamiento con IA:
-   - *OpciÛn 1*: RAG con LangChain y bases de datos vectoriales para contraste de cl·usulas frente a normativas est·ndar.
-   - *OpciÛn 2*: Inferencia estructurada con esquemas de validaciÛn (Pydantic / Prompt Harness) para extracciÛn directa de entidades de riesgo.
+3. **Evaluar y comparar t√©cnica y experimentalmente** dos enfoques de procesamiento con IA:
+   - *Opci√≥n 1*: RAG con LangChain y bases de datos vectoriales para contraste de cl√°usulas frente a normativas est√°ndar.
+   - *Opci√≥n 2*: Inferencia estructurada con esquemas de validaci√≥n (Pydantic / Prompt Harness) para extracci√≥n directa de entidades de riesgo.
 4. **Implementar inferencia local con Ollama** evaluando viabilidad, latencia y privacidad frente a modelos propietarios en la nube.
-5. **Construir un Producto MÌnimo Viable (MVP)** funcional con interfaz gr·fica que permita la carga de archivos, an·lisis automatizado y generaciÛn visual de dict·menes de riesgo.
+5. **Construir un Producto M√≠nimo Viable (MVP)** funcional con interfaz gr√°fica que permita la carga de archivos, an√°lisis automatizado y generaci√≥n visual de dict√°menes de riesgo.
 
 ---
 
@@ -50,16 +50,16 @@ DiseÒar, desarrollar e implementar una plataforma web asistida por Inteligencia 
 
 ### 4.1. Alcance
 - Procesamiento de documentos contractuales digitales en formato PDF.
-- DetecciÛn de al menos 4 categorÌas crÌticas de riesgo:
-  - Cl·usulas de TerminaciÛn y RenovaciÛn Autom·tica.
+- Detecci√≥n de al menos 4 categor√≠as cr√≠ticas de riesgo:
+  - Cl√°usulas de Terminaci√≥n y Renovaci√≥n Autom√°tica.
   - Penalidades Financieras y Multas por Incumplimiento.
   - Niveles de Servicio (SLA: Disponibilidad, Tiempos de Respuesta, Ventanas de Mantenimiento).
-  - Propiedad Intelectual y LimitaciÛn de Responsabilidad.
-- GeneraciÛn de un tablero visual con clasificaciÛn sem·foro (Alto, Medio, Bajo).
+  - Propiedad Intelectual y Limitaci√≥n de Responsabilidad.
+- Generaci√≥n de un tablero visual con clasificaci√≥n sem√°foro (Alto, Medio, Bajo).
 
 ### 4.2. Limitaciones
-- El sistema act˙a como una herramienta de apoyo a la decisiÛn (asistente de auditorÌa) y no sustituye legalmente la fe p˙blica de un abogado.
-- No procesar· en esta primera fase contratos manuscritos con caligrafÌa ilegible sin OCR avanzado previo.
+- El sistema act√∫a como una herramienta de apoyo a la decisi√≥n (asistente de auditor√≠a) y no sustituye legalmente la fe p√∫blica de un abogado.
+- No procesar√° en esta primera fase contratos manuscritos con caligraf√≠a ilegible sin OCR avanzado previo.
 
 ---
 
@@ -67,17 +67,17 @@ DiseÒar, desarrollar e implementar una plataforma web asistida por Inteligencia 
 
 ### 5.1. Requerimientos Funcionales (RF)
 - **RF-01 (Carga de Documentos)**: El sistema debe permitir al usuario cargar contratos en formato PDF de hasta 20 MB.
-- **RF-02 (ExtracciÛn de Texto)**: El sistema debe extraer y preprocesar el texto completo preservando la coherencia de secciones y cl·usulas.
-- **RF-03 (An·lisis de Riesgos)**: El motor de IA debe evaluar el contrato contra reglas de negocio y marcos regulatorios predefinidos.
-- **RF-04 (CategorizaciÛn de Cl·usulas)**: El sistema debe etiquetar y extraer las cl·usulas clave con citas textuales y n˙mero de p·gina.
-- **RF-05 (Sem·foro de Cumplimiento)**: El sistema debe calcular un Ìndice global de riesgo clasific·ndolo en Alto (Rojo), Medio (Amarillo) o Bajo (Verde).
-- **RF-06 (ExportaciÛn de Reporte)**: El sistema debe permitir descargar o imprimir un resumen ejecutivo del dictamen de auditorÌa.
+- **RF-02 (Extracci√≥n de Texto)**: El sistema debe extraer y preprocesar el texto completo preservando la coherencia de secciones y cl√°usulas.
+- **RF-03 (An√°lisis de Riesgos)**: El motor de IA debe evaluar el contrato contra reglas de negocio y marcos regulatorios predefinidos.
+- **RF-04 (Categorizaci√≥n de Cl√°usulas)**: El sistema debe etiquetar y extraer las cl√°usulas clave con citas textuales y n√∫mero de p√°gina.
+- **RF-05 (Sem√°foro de Cumplimiento)**: El sistema debe calcular un √≠ndice global de riesgo clasific√°ndolo en Alto (Rojo), Medio (Amarillo) o Bajo (Verde).
+- **RF-06 (Exportaci√≥n de Reporte)**: El sistema debe permitir descargar o imprimir un resumen ejecutivo del dictamen de auditor√≠a.
 
 ### 5.2. Requerimientos No Funcionales (RNF)
-- **RNF-01 (Portabilidad)**: Toda la soluciÛn debe ser desplegable mediante Docker Compose en cualquier sistema operativo moderno.
-- **RNF-02 (Privacidad)**: El procesamiento de datos debe permitir ejecuciÛn 100% local mediante Ollama para salvaguardar secretos comerciales.
-- **RNF-03 (Tiempo de Respuesta)**: El tiempo de an·lisis de un contrato promedio (10 a 20 p·ginas) no debe exceder los 60 segundos en hardware local est·ndar.
-- **RNF-04 (Usabilidad)**: La interfaz debe ser intuitiva para profesionales no tÈcnicos en derecho o administraciÛn.
+- **RNF-01 (Portabilidad)**: Toda la soluci√≥n debe ser desplegable mediante Docker Compose en cualquier sistema operativo moderno.
+- **RNF-02 (Privacidad)**: El procesamiento de datos debe permitir ejecuci√≥n 100% local mediante Ollama para salvaguardar secretos comerciales.
+- **RNF-03 (Tiempo de Respuesta)**: El tiempo de an√°lisis de un contrato promedio (10 a 20 p√°ginas) no debe exceder los 60 segundos en hardware local est√°ndar.
+- **RNF-04 (Usabilidad)**: La interfaz debe ser intuitiva para profesionales no t√©cnicos en derecho o administraci√≥n.
 
 ---
 
@@ -85,8 +85,8 @@ DiseÒar, desarrollar e implementar una plataforma web asistida por Inteligencia 
 
 | Semana | Hito / Entregable | Estado |
 |---|---|---|
-| **Semana 1** | ConfiguraciÛn de Docker, GitHub, tableros Kanban, documento base docente y diagramas iniciales | En curso |
+| **Semana 1** | Configuraci√≥n de Docker, GitHub, tableros Kanban, documento base docente y diagramas iniciales | En curso |
 | **Semana 2** | Modelado BPMN, Casos de Uso y pruebas comparativas de motores IA (RAG vs Prompting vs Ollama) | Pendiente |
-| **Semana 3** | Desarrollo del Backend (FastAPI + PDF Parser + Motor de AuditorÌa) | Pendiente |
-| **Semana 4** | Desarrollo del Frontend (Dashboard con sem·foro de riesgo y visualizador de cl·usulas) | Pendiente |
-| **Semana 5** | Pruebas integradas con contratos reales/sintÈticos, ajustes de precisiÛn y preparaciÛn de sustentaciÛn | Pendiente |
+| **Semana 3** | Desarrollo del Backend (FastAPI + PDF Parser + Motor de Auditor√≠a) | Pendiente |
+| **Semana 4** | Desarrollo del Frontend (Dashboard con sem√°foro de riesgo y visualizador de cl√°usulas) | Pendiente |
+| **Semana 5** | Pruebas integradas con contratos reales/sint√©ticos, ajustes de precisi√≥n y preparaci√≥n de sustentaci√≥n | Pendiente |
