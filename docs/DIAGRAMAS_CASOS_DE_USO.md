@@ -1,19 +1,19 @@
-# ESPECIFICACI”N Y DIAGRAMAS DE CASOS DE USO (UML)
+# ESPECIFICACI√ìN Y DIAGRAMAS DE CASOS DE USO (UML)
 
-**Proyecto**: Asistente de AuditorÌa y Cumplimiento Regulatorio para Contratos  
-**Autor**: Eduardo (@Eduarpj97)  
-**VersiÛn**: 1.0  
+**Proyecto**: Asistente de Auditor√≠a y Cumplimiento Regulatorio para Contratos  
+**Autor**: Eduardo Pedroza, Daysmir Hugueth, Antonio Guerrero (@Eduarpj97)  
+**Versi√≥n**: 1.0  
 
 ---
 
-## 1. IdentificaciÛn de Actores
+## 1. Identificaci√≥n de Actores
 
 1. **Auditor Legal / Oficial de Cumplimiento (Compliance Officer)**:
-   - Rol principal del sistema. Responsable de cargar los contratos, supervisar el an·lisis, validar las discrepancias marcadas por la IA y autorizar el dictamen final.
+   - Rol principal del sistema. Responsable de cargar los contratos, supervisar el an√°lisis, validar las discrepancias marcadas por la IA y autorizar el dictamen final.
 2. **Administrador del Sistema**:
-   - Encargado de la configuraciÛn de normativas base (marcos ISO 27001, GDPR, plantillas SLA est·ndar) y la gestiÛn de modelos y proveedores de IA (Ollama / APIs).
+   - Encargado de la configuraci√≥n de normativas base (marcos ISO 27001, GDPR, plantillas SLA est√°ndar) y la gesti√≥n de modelos y proveedores de IA (Ollama / APIs).
 3. **Motor de Inteligencia Artificial (Sistema Externo / Subsistema)**:
-   - Subsistema automatizado que realiza el procesamiento de lenguaje natural (NLP), extracciÛn de cl·usulas, b˙squeda sem·ntica (RAG) y c·lculo del nivel de severidad del riesgo.
+   - Subsistema automatizado que realiza el procesamiento de lenguaje natural (NLP), extracci√≥n de cl√°usulas, b√∫squeda sem√°ntica (RAG) y c√°lculo del nivel de severidad del riesgo.
 
 ---
 
@@ -26,14 +26,14 @@ flowchart LR
     Admin["?? Administrador de TI"]
     MotorIA["?? Motor de IA (LangChain / Ollama)"]
 
-    subgraph Plataforma [" Plataforma Web de AuditorÌa Contractual "]
+    subgraph Plataforma [" Plataforma Web de Auditor√≠a Contractual "]
         CU01(["CU-01: Cargar Contrato PDF"])
         CU02(["CU-02: Preprocesar y Extraer Texto"])
-        CU03(["CU-03: Ejecutar AuditorÌa de Cl·usulas"])
-        CU04(["CU-04: Evaluar Riesgos y Sem·foro"])
+        CU03(["CU-03: Ejecutar Auditor√≠a de Cl√°usulas"])
+        CU04(["CU-04: Evaluar Riesgos y Sem√°foro"])
         CU05(["CU-05: Visualizar Dashboard de Resultados"])
         CU06(["CU-06: Ajustar / Validar Dictamen (Human-in-the-Loop)"])
-        CU07(["CU-07: Exportar Informe de AuditorÌa (PDF/JSON)"])
+        CU07(["CU-07: Exportar Informe de Auditor√≠a (PDF/JSON)"])
         CU08(["CU-08: Gestionar Reglas de Cumplimiento y SLAs"])
         CU09(["CU-09: Seleccionar Motor de Inferencia (RAG/Ollama)"])
     end
@@ -55,55 +55,55 @@ flowchart LR
     CU04 -.->|<<include>>| CU05
     CU06 -.->|<<extend>>| CU05
 
-    %% InteracciÛn Motor IA
+    %% Interacci√≥n Motor IA
     CU03 <--> MotorIA
     CU04 <--> MotorIA
 \\\
 
 ---
 
-## 3. EspecificaciÛn Detallada de Casos de Uso
+## 3. Especificaci√≥n Detallada de Casos de Uso
 
 ### CU-01: Cargar Contrato PDF
 - **Actor Principal**: Auditor Legal.
-- **PrecondiciÛn**: El usuario tiene acceso a la plataforma web.
+- **Precondici√≥n**: El usuario tiene acceso a la plataforma web.
 - **Flujo Principal**:
   1. El auditor arrastra o selecciona un archivo en formato PDF (contrato, SLA o licencia).
-  2. El sistema valida formato (.pdf), integridad y tamaÒo m·ximo permitido (20 MB).
-  3. El sistema almacena temporalmente el archivo y genera un identificador ˙nico de sesiÛn de auditorÌa.
-- **Flujo Alternativo (A1 - Archivo no v·lido)**:
-  - Si el archivo no es PDF o excede el tamaÒo, el sistema muestra una alerta de error y solicita un nuevo archivo.
+  2. El sistema valida formato (.pdf), integridad y tama√±o m√°ximo permitido (20 MB).
+  3. El sistema almacena temporalmente el archivo y genera un identificador √∫nico de sesi√≥n de auditor√≠a.
+- **Flujo Alternativo (A1 - Archivo no v√°lido)**:
+  - Si el archivo no es PDF o excede el tama√±o, el sistema muestra una alerta de error y solicita un nuevo archivo.
 
-### CU-03: Ejecutar AuditorÌa de Cl·usulas CrÌticas
+### CU-03: Ejecutar Auditor√≠a de Cl√°usulas Cr√≠ticas
 - **Actor Principal**: Auditor Legal / Motor de IA.
 - **Flujo Principal**:
-  1. El sistema invoca al motor de IA (vÌa RAG o prompting estructurado).
+  1. El sistema invoca al motor de IA (v√≠a RAG o prompting estructurado).
   2. El motor analiza las secciones clave:
-     - Cl·usulas de rescisiÛn o terminaciÛn anticipada.
+     - Cl√°usulas de rescisi√≥n o terminaci√≥n anticipada.
      - Niveles de disponibilidad de servicio (SLA uptime %).
-     - Penalidades financieras y lÌmites de indemnizaciÛn.
-     - Ley aplicable, jurisdicciÛn y protecciÛn de datos.
-  3. El sistema asocia a cada hallazgo la cita textual del contrato y la p·gina de origen.
+     - Penalidades financieras y l√≠mites de indemnizaci√≥n.
+     - Ley aplicable, jurisdicci√≥n y protecci√≥n de datos.
+  3. El sistema asocia a cada hallazgo la cita textual del contrato y la p√°gina de origen.
 
-### CU-04: Evaluar Riesgos y Asignar Sem·foro
+### CU-04: Evaluar Riesgos y Asignar Sem√°foro
 - **Actor Principal**: Motor de IA.
 - **Flujo Principal**:
-  1. El sistema compara las cl·usulas extraÌdas contra los umbrales de riesgo normativo.
-  2. Asigna una calificaciÛn cuantitativa y cualitativa:
-     - ?? **Riesgo Alto (CrÌtico)**: Cl·usulas abusivas, multas desmedidas, SLAs indefinidos.
-     - ?? **Riesgo Medio (Advertencia)**: TÈrminos vagos, renovaciÛn autom·tica con plazo corto de preaviso.
-     - ?? **Riesgo Bajo (Conforme)**: TÈrminos equilibrados y conformes a buenas pr·cticas de la industria.
+  1. El sistema compara las cl√°usulas extra√≠das contra los umbrales de riesgo normativo.
+  2. Asigna una calificaci√≥n cuantitativa y cualitativa:
+     - ?? **Riesgo Alto (Cr√≠tico)**: Cl√°usulas abusivas, multas desmedidas, SLAs indefinidos.
+     - ?? **Riesgo Medio (Advertencia)**: T√©rminos vagos, renovaci√≥n autom√°tica con plazo corto de preaviso.
+     - ?? **Riesgo Bajo (Conforme)**: T√©rminos equilibrados y conformes a buenas pr√°cticas de la industria.
 
 ### CU-06: Ajustar y Validar Dictamen (Human-in-the-Loop)
 - **Actor Principal**: Auditor Legal.
 - **Flujo Principal**:
-  1. El auditor revisa las cl·usulas marcadas en el dashboard.
-  2. Si discrepa con la clasificaciÛn de la IA, puede modificar el nivel de riesgo o aÒadir comentarios de observaciÛn jurÌdica.
-  3. El sistema guarda la versiÛn validada por el humano.
+  1. El auditor revisa las cl√°usulas marcadas en el dashboard.
+  2. Si discrepa con la clasificaci√≥n de la IA, puede modificar el nivel de riesgo o a√±adir comentarios de observaci√≥n jur√≠dica.
+  3. El sistema guarda la versi√≥n validada por el humano.
 
-### CU-07: Exportar Informe de AuditorÌa
+### CU-07: Exportar Informe de Auditor√≠a
 - **Actor Principal**: Auditor Legal.
 - **Flujo Principal**:
   1. El auditor hace clic en "Exportar Informe".
-  2. El sistema compila un reporte formal estructurado (resumen ejecutivo, sem·foro, tabla de cl·usulas y observaciones).
+  2. El sistema compila un reporte formal estructurado (resumen ejecutivo, sem√°foro, tabla de cl√°usulas y observaciones).
   3. Descarga el documento listo para ser remitido a la gerencia o al cliente.
