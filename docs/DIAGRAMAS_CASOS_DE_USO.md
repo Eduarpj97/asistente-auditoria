@@ -1,109 +1,191 @@
-# ESPECIFICACIÓN Y DIAGRAMAS DE CASOS DE USO (UML)
+﻿# Audiflow — Diagrama de Casos de Uso
 
-**Proyecto**: Asistente de Auditoría y Cumplimiento Regulatorio para Contratos  
-**Autor**: Eduardo Pedroza, Daysmir Hugueth, Antonio Guerrero (@Eduarpj97)  
-**Versión**: 1.0  
-
----
-
-## 1. Identificación de Actores
-
-1. **Auditor Legal / Oficial de Cumplimiento (Compliance Officer)**:
-   - Rol principal del sistema. Responsable de cargar los contratos, supervisar el análisis, validar las discrepancias marcadas por la IA y autorizar el dictamen final.
-2. **Administrador del Sistema**:
-   - Encargado de la configuración de normativas base (marcos ISO 27001, GDPR, plantillas SLA estándar) y la gestión de modelos y proveedores de IA (Ollama / APIs).
-3. **Motor de Inteligencia Artificial (Sistema Externo / Subsistema)**:
-   - Subsistema automatizado que realiza el procesamiento de lenguaje natural (NLP), extracción de cláusulas, búsqueda semántica (RAG) y cálculo del nivel de severidad del riesgo.
+**Proyecto**: Audiflow — Asistente de Auditoría y Cumplimiento Regulatorio para Contratos Financieros o de Software  
+**Autor**: Eduardo (@Eduarpj97)  
+**Versión**: 2.0  
 
 ---
 
-## 2. Diagrama General de Casos de Uso (UML)
+## 1. Diagrama Visual de Casos de Uso
+
+![Audiflow — Diagrama de casos de uso](images/audiflow_casos_de_uso.jpg)
+
+---
+
+## 2. Diagrama de Casos de Uso en Notación Mermaid
 
 \\\mermaid
 flowchart LR
-    %% Actores
-    Auditor["?? Auditor / Oficial de Cumplimiento"]
-    Admin["?? Administrador de TI"]
-    MotorIA["?? Motor de IA (LangChain / Ollama)"]
-
-    subgraph Plataforma [" Plataforma Web de Auditoría Contractual "]
-        CU01(["CU-01: Cargar Contrato PDF"])
-        CU02(["CU-02: Preprocesar y Extraer Texto"])
-        CU03(["CU-03: Ejecutar Auditoría de Cláusulas"])
-        CU04(["CU-04: Evaluar Riesgos y Semáforo"])
-        CU05(["CU-05: Visualizar Dashboard de Resultados"])
-        CU06(["CU-06: Ajustar / Validar Dictamen (Human-in-the-Loop)"])
-        CU07(["CU-07: Exportar Informe de Auditoría (PDF/JSON)"])
-        CU08(["CU-08: Gestionar Reglas de Cumplimiento y SLAs"])
-        CU09(["CU-09: Seleccionar Motor de Inferencia (RAG/Ollama)"])
+    %% Actores de Negocio
+    subgraph Actores_Negocio [" Perfiles de Usuario de Negocio "]
+        TI["👤 Responsable de TI / Operaciones"]
+        Founder["👤 Dueño de pyme / Founder"]
+        Freelancer["👤 Freelancer / Solopreneur B2B"]
+        Finanzas["👤 Equipo de Compras y Finanzas"]
+        UserNegocio["👤 Usuario de negocio"]
     end
 
-    %% Relaciones Auditor
-    Auditor --> CU01
-    Auditor --> CU05
-    Auditor --> CU06
-    Auditor --> CU07
+    %% Generalización de usuarios
+    TI --> UserNegocio
+    Founder --> UserNegocio
+    Freelancer --> UserNegocio
+    Finanzas --> UserNegocio
 
-    %% Relaciones Admin
-    Admin --> CU08
-    Admin --> CU09
+    %% Actores del Sistema y Soporte
+    Admin["👤 Administrador del sistema"]
+    OCR["⚙️ Motor OCR"]
+    IANLP["🤖 Servicio de IA / NLP"]
 
-    %% Relaciones Include / Extend
-    CU01 -.->|<<include>>| CU02
-    CU02 -.->|<<include>>| CU03
-    CU03 -.->|<<include>>| CU04
-    CU04 -.->|<<include>>| CU05
-    CU06 -.->|<<extend>>| CU05
+    %% Sistema Audiflow
+    subgraph Audiflow [" Sistema Audiflow "]
+        
+        subgraph Mod1 [" 1. Ingesta de documentos "]
+            UC1(["UC1 Cargar contrato (PDF / DOCX)"])
+            UC2(["UC2 Digitalizar documento escaneado (OCR)"])
+            UC3(["UC3 Convertir a texto estructurado"])
+        end
 
-    %% Interacción Motor IA
-    CU03 <--> MotorIA
-    CU04 <--> MotorIA
+        subgraph Mod2 [" 2. Análisis de cláusulas y riesgos "]
+            UC4(["UC4 Extraer cláusulas y términos críticos"])
+            UC5(["UC5 Normalizar términos extraídos"])
+            UC6(["UC6 Detectar y calificar riesgos (severidad)"])
+            UC7(["UC7 Comparar contra estándares o playbook"])
+            UC8(["UC8 Gestionar playbook interno de cláusulas"])
+        end
+
+        subgraph Mod3 [" 3. Resultados y visualización "]
+            UC9(["UC9 Consultar resumen ejecutivo en lenguaje simple"])
+            UC10(["UC10 Ver panel de indicadores y alertas"])
+            UC11(["UC11 Ver tabla comparativa de cláusulas clave"])
+        end
+
+        subgraph Mod4 [" 4. Auditoría y trazabilidad "]
+            UC12(["UC12 Consultar trazabilidad del hallazgo (página/sección)"])
+            UC13(["UC13 Exportar informe de análisis"])
+            UC14(["UC14 Consultar historial de análisis"])
+        end
+
+        subgraph Mod5 [" 5. Seguridad y acceso "]
+            UC15(["UC15 Autenticarse en la plataforma"])
+            UC16(["UC16 Gestionar usuarios y permisos"])
+        end
+
+    end
+
+    %% Relaciones Usuario de Negocio
+    UserNegocio --> UC1
+    UserNegocio --> UC9
+    UserNegocio --> UC10
+    UserNegocio --> UC11
+    UserNegocio --> UC13
+    UserNegocio --> UC14
+    UserNegocio --> UC15
+
+    %% Relaciones específicas Responsable TI
+    TI --> UC7
+    TI --> UC8
+
+    %% Relaciones Administrador
+    Admin --> UC15
+    Admin --> UC16
+
+    %% Relaciones Includes y Extends
+    UC1 -.->|<<extend>>| UC2
+    UC1 -.->|<<include>>| UC3
+    UC4 -.->|<<include>>| UC5
+    UC6 -.->|<<include>>| UC7
+    UC10 -.->|<<include>>| UC6
+    UC11 -.->|<<include>>| UC4
+    UC13 -.->|<<include>>| UC12
+    UC12 -.->|<<include>>| UC4
+
+    %% Relaciones con Motores de Servicio
+    UC2 --> OCR
+    UC3 --> IANLP
+    UC4 --> IANLP
+    UC6 --> IANLP
 \\\
 
 ---
 
-## 3. Especificación Detallada de Casos de Uso
+## 3. Identificación y Definición de Actores
 
-### CU-01: Cargar Contrato PDF
-- **Actor Principal**: Auditor Legal.
-- **Precondición**: El usuario tiene acceso a la plataforma web.
-- **Flujo Principal**:
-  1. El auditor arrastra o selecciona un archivo en formato PDF (contrato, SLA o licencia).
-  2. El sistema valida formato (.pdf), integridad y tamaño máximo permitido (20 MB).
-  3. El sistema almacena temporalmente el archivo y genera un identificador único de sesión de auditoría.
-- **Flujo Alternativo (A1 - Archivo no válido)**:
-  - Si el archivo no es PDF o excede el tamaño, el sistema muestra una alerta de error y solicita un nuevo archivo.
+| Actor | Tipo | Descripción |
+|---|---|---|
+| **Usuario de negocio** | Humano (General) | Rol base que engloba las necesidades operativas de revisión contractual en la organización. |
+| **Responsable de TI / Operaciones** | Humano (Especializado) | Evalúa SLAs de infraestructura, software y gestiona el playbook de cláusulas técnicas. |
+| **Dueño de pyme / Founder** | Humano (Especializado) | Requiere visión ejecutiva rápida de riesgos legales, pasivos financieros y cláusulas abusivas. |
+| **Freelancer / Solopreneur B2B** | Humano (Especializado) | Verifica condiciones de pago, derechos de propiedad intelectual y exclusividad. |
+| **Equipo de Compras y Finanzas** | Humano (Especializado) | Audita penalidades, costos recurrentes, renovaciones tácitas y términos de terminación. |
+| **Administrador del sistema** | Humano | Gestiona altas, bajas, roles, permisos y seguridad de la plataforma. |
+| **Motor OCR** | Sistema / Subsistema | Módulo óptico que procesa imágenes o PDFs escaneados convirtiéndolos en texto operable. |
+| **Servicio de IA / NLP** | Sistema / Subsistema | Motor de Inteligencia Artificial (RAG / Ollama / LangChain) que analiza semántica y severidad. |
 
-### CU-03: Ejecutar Auditoría de Cláusulas Críticas
-- **Actor Principal**: Auditor Legal / Motor de IA.
-- **Flujo Principal**:
-  1. El sistema invoca al motor de IA (vía RAG o prompting estructurado).
-  2. El motor analiza las secciones clave:
-     - Cláusulas de rescisión o terminación anticipada.
-     - Niveles de disponibilidad de servicio (SLA uptime %).
-     - Penalidades financieras y límites de indemnización.
-     - Ley aplicable, jurisdicción y protección de datos.
-  3. El sistema asocia a cada hallazgo la cita textual del contrato y la página de origen.
+---
 
-### CU-04: Evaluar Riesgos y Asignar Semáforo
-- **Actor Principal**: Motor de IA.
-- **Flujo Principal**:
-  1. El sistema compara las cláusulas extraídas contra los umbrales de riesgo normativo.
-  2. Asigna una calificación cuantitativa y cualitativa:
-     - ?? **Riesgo Alto (Crítico)**: Cláusulas abusivas, multas desmedidas, SLAs indefinidos.
-     - ?? **Riesgo Medio (Advertencia)**: Términos vagos, renovación automática con plazo corto de preaviso.
-     - ?? **Riesgo Bajo (Conforme)**: Términos equilibrados y conformes a buenas prácticas de la industria.
+## 4. Catálogo Detallado de Casos de Uso (Audiflow)
 
-### CU-06: Ajustar y Validar Dictamen (Human-in-the-Loop)
-- **Actor Principal**: Auditor Legal.
-- **Flujo Principal**:
-  1. El auditor revisa las cláusulas marcadas en el dashboard.
-  2. Si discrepa con la clasificación de la IA, puede modificar el nivel de riesgo o añadir comentarios de observación jurídica.
-  3. El sistema guarda la versión validada por el humano.
+### Módulo 1: Ingesta de Documentos
+- **UC1: Cargar contrato (PDF / DOCX)**
+  - *Actor*: Usuario de negocio.
+  - *Descripción*: Permite cargar documentos digitales en formatos PDF o DOCX para su procesamiento.
+  - *Relaciones*: <<include>> UC3, <<extend>> UC2.
+- **UC2: Digitalizar documento escaneado (OCR)**
+  - *Actor*: Motor OCR.
+  - *Descripción*: Si el archivo carece de capa de texto vectorial, se activa el motor de reconocimiento óptico de caracteres para extraer el contenido.
+- **UC3: Convertir a texto estructurado**
+  - *Actor*: Servicio de IA / NLP.
+  - *Descripción*: Normaliza y limpia el texto, identificando títulos, numerales y párrafos contractuales.
 
-### CU-07: Exportar Informe de Auditoría
-- **Actor Principal**: Auditor Legal.
-- **Flujo Principal**:
-  1. El auditor hace clic en "Exportar Informe".
-  2. El sistema compila un reporte formal estructurado (resumen ejecutivo, semáforo, tabla de cláusulas y observaciones).
-  3. Descarga el documento listo para ser remitido a la gerencia o al cliente.
+### Módulo 2: Análisis de Cláusulas y Riesgos
+- **UC4: Extraer cláusulas y términos críticos**
+  - *Actor*: Servicio de IA / NLP.
+  - *Descripción*: Identifica cláusulas de penalización, terminación anticipada, SLA, jurisdicción y privacidad.
+  - *Relaciones*: <<include>> UC5.
+- **UC5: Normalizar términos extraídos**
+  - *Actor*: Servicio de IA / NLP.
+  - *Descripción*: Homologa conceptos jurídicos dispares a un vocabulario estándar de auditoría.
+- **UC6: Detectar y calificar riesgos (severidad)**
+  - *Actor*: Servicio de IA / NLP.
+  - *Descripción*: Asigna niveles de severidad cuantitativos y cualitativos (Rojo = Crítico, Amarillo = Advertencia, Verde = Conforme).
+  - *Relaciones*: <<include>> UC7.
+- **UC7: Comparar contra estándares o playbook**
+  - *Actor*: Responsable de TI / Servicio de IA.
+  - *Descripción*: Contrasta los términos del contrato analizado frente a las políticas estándar de la empresa o normativas de referencia.
+- **UC8: Gestionar playbook interno de cláusulas**
+  - *Actor*: Responsable de TI / Operaciones.
+  - *Descripción*: Permite definir y actualizar las reglas de aceptación, umbrales de SLA permitidos y cláusulas no negociables.
+
+### Módulo 3: Resultados y Visualización
+- **UC9: Consultar resumen ejecutivo en lenguaje simple**
+  - *Actor*: Usuario de negocio.
+  - *Descripción*: Muestra una síntesis no técnica del contrato orientada a la toma rápida de decisiones gerenciales.
+- **UC10: Ver panel de indicadores y alertas**
+  - *Actor*: Usuario de negocio.
+  - *Descripción*: Dashboard visual con semáforo global, porcentaje de riesgo y tarjetas de alerta inmediata.
+  - *Relaciones*: <<include>> UC6.
+- **UC11: Ver tabla comparativa de cláusulas clave**
+  - *Actor*: Usuario de negocio.
+  - *Descripción*: Vista tabular interactiva que contrapone lo establecido en el contrato vs lo estipulado en el playbook estándar.
+  - *Relaciones*: <<include>> UC4.
+
+### Módulo 4: Auditoría y Trazabilidad
+- **UC12: Consultar trazabilidad del hallazgo (página/sección)**
+  - *Actor*: Usuario de negocio / Servicio de IA.
+  - *Descripción*: Vincula cada riesgo y cláusula extraída con el fragmento exacto y número de página original del documento.
+  - *Relaciones*: <<include>> UC4.
+- **UC13: Exportar informe de análisis**
+  - *Actor*: Usuario de negocio.
+  - *Descripción*: Genera y descarga un reporte formal en PDF con la auditoría integral y sus evidencias.
+  - *Relaciones*: <<include>> UC12.
+- **UC14: Consultar historial de análisis**
+  - *Actor*: Usuario de negocio.
+  - *Descripción*: Permite consultar auditorías previas, versiones comparativas y evolución contractual de proveedores.
+
+### Módulo 5: Seguridad y Acceso
+- **UC15: Autenticarse en la plataforma**
+  - *Actor*: Usuario de negocio / Administrador.
+  - *Descripción*: Control de acceso seguro mediante credenciales o tokens.
+- **UC16: Gestionar usuarios y permisos**
+  - *Actor*: Administrador del sistema.
+  - *Descripción*: Administración de cuentas corporativas, roles y niveles de confidencialidad de la información.
