@@ -1,7 +1,7 @@
 ﻿# Audiflow — Proceso BPMN: Revisión Automatizada de un Contrato
 
 **Proyecto**: Audiflow — Asistente de Auditoría y Cumplimiento Regulatorio para Contratos Financieros o de Software  
-**Autor**: Eduardo (@Eduarpj97)  
+**Autor**: Eduardo Pedroza, Daysmir Hugueth, Antonio Guerrero (@Eduarpj97)  
 **Versión**: 2.0  
 
 ---
