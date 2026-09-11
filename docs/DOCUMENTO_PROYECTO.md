@@ -1,7 +1,7 @@
 # DOCUMENTO DE PROPUESTA Y MEMORIA TÉCNICA DE PROYECTO DE GRADO
 
 **Título del Proyecto**:  
-*Asistente Inteligente de Auditoría y Cumplimiento Regulatorio para Contratos Financieros y de Software*
+*Audiflow — Asistente de Auditoría y Cumplimiento Regulatorio para Contratos Financieros o de Software*
 
 **Autor**: Eduardo Pedroza, Daysmir Hugueth, Antonio Guerrero
 
