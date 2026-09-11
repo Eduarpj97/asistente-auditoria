@@ -1,42 +1,42 @@
-# Asistente de Auditor韆 y Cumplimiento Regulatorio para Contratos Financieros o de Software
+# Asistente de Auditor铆a y Cumplimiento Regulatorio para Contratos Financieros o de Software
 
 [![Docker Image](https://img.shields.io/badge/docker%20hub-eduarpj%2Fasistente--auditoria-blue?logo=docker)](https://hub.docker.com/r/eduarpj/asistente-auditoria)
 [![Estado](https://img.shields.io/badge/Estado-En%20Desarrollo%20(MVP)-orange)](#)
 [![Licencia](https://img.shields.io/badge/Uso-Acad%C3%A9mico%20%2F%20Grado-green)](#)
 
-## ?? 1. Descripci髇 del Proyecto
-Este proyecto consiste en una plataforma web asistida por Inteligencia Artificial dise馻da para optimizar y automatizar el proceso de auditor韆 y an醠isis de cumplimiento regulatorio en contratos financieros, licencias de software (SaaS) y acuerdos de nivel de servicio (SLA).
+## ?? 1. Descripci贸n del Proyecto
+Este proyecto consiste en una plataforma web asistida por Inteligencia Artificial dise帽ada para optimizar y automatizar el proceso de auditor铆a y an谩lisis de cumplimiento regulatorio en contratos financieros, licencias de software (SaaS) y acuerdos de nivel de servicio (SLA).
 
 ### ?? Problema
-La revisi髇 manual de contratos legales y de software en peque馻s y medianas empresas (pymes) o entidades financieras toma horas, es propensa al error humano por fatiga y requiere asesor韆 legal especializada de alto costo.
+La revisi贸n manual de contratos legales y de software en peque帽as y medianas empresas (pymes) o entidades financieras toma horas, es propensa al error humano por fatiga y requiere asesor铆a legal especializada de alto costo.
 
-### ?? Soluci髇
+### ?? Soluci贸n
 El usuario carga contratos en formato PDF a una plataforma web. El sistema:
-1. Extrae y segmenta las cl醬sulas cr韙icas.
+1. Extrae y segmenta las cl谩usulas cr铆ticas.
 2. Detecta riesgos normativos (penalidades abusivas, SLAs ambiguos, rescisiones desfavorables, brechas de privacidad).
-3. Presenta un informe visual ejecutivo con sem醘oro de riesgos (Rojo, Amarillo, Verde) y explicaciones en lenguaje claro.
+3. Presenta un informe visual ejecutivo con sem谩foro de riesgos (Rojo, Amarillo, Verde) y explicaciones en lenguaje claro.
 
 ---
 
-## ??? 2. Arquitectura y Tecnolog韆s
+## ??? 2. Arquitectura y Tecnolog铆as
 - **Infraestructura**: Docker, Docker Compose, Docker Hub (eduarpj/asistente-auditoria).
 - **Backend**: Python / FastAPI.
 - **Motor de IA**: 
-  - *Opci髇 1*: RAG (Retrieval-Augmented Generation) con LangChain y base vectorial (ChromaDB / FAISS).
-  - *Opci髇 2*: Extracci髇 estructurada con Prompt Harness y esquemas Pydantic.
+  - *Opci贸n 1*: RAG (Retrieval-Augmented Generation) con LangChain y base vectorial (ChromaDB / FAISS).
+  - *Opci贸n 2*: Extracci贸n estructurada con Prompt Harness y esquemas Pydantic.
   - *Privacidad / Local*: Inferencia local de modelos de pesos abiertos con **Ollama** (Llama 3.1 / Qwen 2.5) para garantizar confidencialidad de datos contractuales.
-- **Frontend**: Panel de control interactivo con carga de archivos y m閠ricas de riesgo.
+- **Frontend**: Panel de control interactivo con carga de archivos y m茅tricas de riesgo.
 
 ---
 
-## ?? 3. Inicio R醦ido con Docker
+## ?? 3. Inicio R谩pido con Docker
 
-### Opci髇 A: Usando la imagen publicada en Docker Hub
+### Opci贸n A: Usando la imagen publicada en Docker Hub
 \\\ash
 docker run -d -p 8080:80 eduarpj/asistente-auditoria:v0.1
 \\\
 
-### Opci髇 B: Usando Docker Compose localmente
+### Opci贸n B: Usando Docker Compose localmente
 \\\ash
 docker compose up -d
 \\\
@@ -50,19 +50,19 @@ docker compose down
 ---
 
 ## ?? 4. Roadmap de Desarrollo
-- [x] **Paso 1**: Pruebas de Docker, Docker Compose y publicaci髇 en Docker Hub (\eduarpj\).
-- [ ] **Paso 2**: Configuraci髇 de Git, repositorio en GitHub y tablero de tareas (GitHub Projects).
+- [x] **Paso 1**: Pruebas de Docker, Docker Compose y publicaci贸n en Docker Hub (\eduarpj\).
+- [ ] **Paso 2**: Configuraci贸n de Git, repositorio en GitHub y tablero de tareas (GitHub Projects).
 - [ ] **Paso 3**: Compartir repositorio con el docente evaluador.
-- [ ] **Paso 4**: Redacci髇 y entrega del documento de memoria t閏nica / propuesta de grado.
-- [ ] **Paso 5**: Implementaci髇 y an醠isis de RAG + LangChain.
-- [ ] **Paso 6**: Experimentaci髇 con Prompting estructurado y arn閟 de evaluaci髇.
-- [ ] **Paso 7**: Integraci髇 de Ollama (modelos open-weights locales).
+- [ ] **Paso 4**: Redacci贸n y entrega del documento de memoria t茅cnica / propuesta de grado.
+- [ ] **Paso 5**: Implementaci贸n y an谩lisis de RAG + LangChain.
+- [ ] **Paso 6**: Experimentaci贸n con Prompting estructurado y arn茅s de evaluaci贸n.
+- [ ] **Paso 7**: Integraci贸n de Ollama (modelos open-weights locales).
 - [ ] **Paso 8**: Modelado de Diagramas de Casos de Uso (UML).
 - [ ] **Paso 9**: Modelado de Diagramas de Proceso BPMN (AS-IS y TO-BE).
-- [ ] **Paso 10**: Construcci髇 e integraci髇 del MVP funcional.
+- [ ] **Paso 10**: Construcci贸n e integraci贸n del MVP funcional.
 
 ---
 
 ## ????? Autor
-- **Eduardo** (@eduarpj)
-- Proyecto de Grado para Titulaci髇 Profesional.
+- **Eduardo Pedroza, Daysmir Hugueth, Antonio Guerrero** (@eduarpj)
+- Proyecto de Grado para Titulaci贸n Profesional.
