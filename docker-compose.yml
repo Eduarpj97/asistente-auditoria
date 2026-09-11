@@ -1,6 +1,9 @@
 services:
-  web-test:
-    image: nginx:alpine
-    container_name: auditoria_web_test
+  web:
+    build: .
+    image: eduarpj/asistente-auditoria:latest
+    container_name: asistente-auditoria
     ports:
       - "8080:80"
+    volumes:
+      - ./index.html:/usr/share/nginx/html/index.html
