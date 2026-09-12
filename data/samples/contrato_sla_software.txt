@@ -1,0 +1,35 @@
+﻿CONTRATO DE LICENCIA DE SOFTWARE COMO SERVICIO (SaaS) Y ACUERDO DE NIVEL DE SERVICIO (SLA)
+
+Entre las partes:
+DE UNA PARTE: CLOUDTECH SOLUTIONS S.A.S. (en adelante, el "PROVEEDOR")
+DE OTRA PARTE: INVERSIONES & FINANZAS DEL NORTE LTDA. (en adelante, el "CLIENTE")
+
+CLÁUSULA PRIMERA - OBJETO
+El PROVEEDOR concede al CLIENTE una licencia no exclusiva, intransferible y de acceso remoto a la plataforma de gestión financiera en la nube "FinCloud Enterprise".
+
+CLÁUSULA SEGUNDA - NIVEL DE SERVICIO (SLA) Y DISPONIBILIDAD
+2.1. El PROVEEDOR garantiza una disponibilidad mensual del servicio ("Uptime") del noventa y nueve punto cinco por ciento (99.5%), calculada de manera mensual excluyendo mantenimientos programados.
+2.2. Las ventanas de mantenimiento programado se realizarán preferentemente los fines de semana con un preaviso mínimo de setenta y dos (72) horas por correo electrónico.
+
+CLÁUSULA TERCERA - PENALIDADES Y CRÉDITOS DE SERVICIO
+3.1. En caso de que la disponibilidad mensual sea inferior al 99.5% y superior al 95.0%, el CLIENTE tendrá derecho a un crédito de servicio equivalente al diez por ciento (10%) de la tarifa mensual.
+3.2. Si la disponibilidad mensual es inferior al 95.0%, el crédito ascenderá al veinticinco por ciento (25%) de la tarifa mensual.
+3.3. En ningún caso las penalidades acumuladas en un año calendario superarán el cincuenta por ciento (50%) del valor de una anualidad del contrato.
+
+CLÁUSULA CUARTA - VIGENCIA Y RENOVACIÓN AUTOMÁTICA
+4.1. El presente contrato tendrá una vigencia inicial obligatoria de doce (12) meses contados a partir de la firma.
+4.2. RENOVACIÓN AUTOMÁTICA: El contrato se renovará tácita y automáticamente por períodos sucesivos de igual duración (12 meses), a menos que cualquiera de las partes notifique por escrito su intención de no renovar con una antelación mínima de sesenta (60) días naturales a la fecha de vencimiento.
+
+CLÁUSULA QUINTA - TERMINACIÓN ANTICIPADA
+5.1. El CLIENTE solo podrá rescindir anticipadamente el contrato mediando incumplimiento grave y reiterado del PROVEEDOR, habiendo otorgado previamente un plazo de subsanación de treinta (30) días.
+5.2. En caso de terminación injustificada por parte del CLIENTE antes del vencimiento del término pactado, el CLIENTE deberá pagar la totalidad de las mensualidades restantes hasta completar el período acordado a título de cláusula penal indemnizatoria.
+
+CLÁUSULA SEXTA - LIMITACIÓN DE RESPONSABILIDAD
+6.1. La responsabilidad económica total y acumulada del PROVEEDOR por cualquier concepto derivado de este contrato, incluyendo fallas técnicas, pérdida de datos o lucro cesante, estará estrictamente limitada al monto efectivamente pagado por el CLIENTE en el mes calendario inmediatamente anterior al siniestro.
+
+CLÁUSULA SÉPTIMA - CONFIDENCIALIDAD Y TRATAMIENTO DE DATOS
+7.1. Ambas partes se obligan a mantener estricta reserva de la información confidencial a la que tengan acceso.
+7.2. El PROVEEDOR actuará como encargado del tratamiento de datos personales, comprometiéndose a implementar medidas de seguridad técnicas y organizativas conformes al estándar ISO/IEC 27001 y las regulaciones locales de Habeas Data.
+
+CLÁUSULA OCTAVA - JURISDICCIÓN Y LEY APLICABLE
+Las controversias que surjan se someterán a la legislación comercial nacional y a la jurisdicción de los jueces civiles del domicilio principal del PROVEEDOR.
