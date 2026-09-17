@@ -1,24 +1,38 @@
+﻿# services/ocr_service.py
 from io import BytesIO
-from pypdf import PdfReader
-from pdf2image import convert_from_bytes
-import pytesseract
 
 def extract_text_hybrid(pdf_bytes: bytes, lang: str = "spa") -> str:
+    """
+    Extrae texto de un archivo PDF.
+    Usa pypdf por defecto para texto vectorial, y si una página viene vacía o escaneada,
+    intenta aplicar OCR con pdf2image y pytesseract si están disponibles.
+    """
+    try:
+        from pypdf import PdfReader
+    except ImportError:
+        raise RuntimeError("La librería 'pypdf' no está instalada. Ejecute: pip install pypdf")
+
     reader = PdfReader(BytesIO(pdf_bytes))
     extracted_pages = []
 
     for idx, page in enumerate(reader.pages):
         text = page.extract_text() or ""
         
-        # Si la página no tiene texto extraíble, aplicar OCR a esa página específica
+        # Si la página no tiene texto extraíble, intentar aplicar OCR a esa página
         if not text.strip():
-            images = convert_from_bytes(
-                pdf_bytes, 
-                first_page=idx + 1, 
-                last_page=idx + 1
-            )
-            if images:
-                text = pytesseract.image_to_string(images[0], lang=lang)
+            try:
+                from pdf2image import convert_from_bytes
+                import pytesseract
+                images = convert_from_bytes(
+                    pdf_bytes, 
+                    first_page=idx + 1, 
+                    last_page=idx + 1
+                )
+                if images:
+                    text = pytesseract.image_to_string(images[0], lang=lang)
+            except Exception:
+                # Si no está instalado poppler o tesseract, continuar con el texto disponible
+                pass
 
         extracted_pages.append(text)
 

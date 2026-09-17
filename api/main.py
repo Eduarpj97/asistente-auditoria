@@ -1,9 +1,10 @@
-import uvicorn
+﻿import uvicorn
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses import RedirectResponse
 from services.ocr_service import extract_text_hybrid
 from services.chunk_service import create_chunks
 from services.risk_scoring_service import risk_engine
+from services.llm_audit_service import llm_service
 from schemas import (
     ProcessingResponse,
     RiskAssessmentResponse,
@@ -12,14 +13,28 @@ from schemas import (
 )
 
 app = FastAPI(
-    title="Audiflow - Regulatory Risk Scoring & PDF Processing API",
-    description="API de procesamiento de documentos legales y auditoría con motor de scoring de riesgos normativos (Semáforo Rojo/Amarillo/Verde).",
-    version="1.1.0"
+    title="Audiflow - Regulatory Risk Scoring & AI Contract Audit API",
+    description="API integral de auditoría de contratos financieros y de software. Combina motor de reglas determinísticas (RGPD, AML, ISO 27001) e inferencia semántica con Llama 3.1 (Ollama).",
+    version="1.2.0"
 )
 
 @app.get("/", include_in_schema=False)
 async def redirect_to_docs():
     return RedirectResponse(url="/docs")
+
+@app.get("/v1/health", summary="Estado del sistema y conectividad con la VPS de Ollama")
+async def health_check():
+    """
+    Retorna el estado de salud de la API y la conectividad en tiempo real
+    con el servicio de inferencia Llama 3.1 (Ollama en VPS de Oracle o local).
+    """
+    ollama_status = llm_service.check_health()
+    return {
+        "api_status": "ONLINE",
+        "service": "Audiflow API",
+        "version": "1.2.0",
+        "ollama_engine": ollama_status
+    }
 
 @app.post("/v1/process-pdf", response_model=ProcessingResponse, summary="Procesar PDF y evaluar riesgos normativos")
 async def process_pdf(
@@ -50,6 +65,43 @@ async def process_pdf(
         chunks=chunks,
         risk_assessment=risk_assessment
     )
+
+@app.post("/v1/audit-contract-ai", summary="Auditoría híbrida avanzada (Reglas Normativas + IA Llama 3.1)")
+async def audit_contract_ai(
+    file: UploadFile = File(...),
+    use_llm: bool = Form(True, description="Incluir análisis semántico profundo con Llama 3.1")
+):
+    """
+    Endpoint insignia de Audiflow:
+    1. Extrae el texto del PDF.
+    2. Ejecuta el motor de scoring de reglas (Semáforo Rojo/Amarillo/Verde).
+    3. Invoca a Llama 3.1 en Ollama para extraer cláusulas críticas y recomendaciones de negociación.
+    """
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Formato no soportado. Debe ser un PDF.")
+
+    pdf_bytes = await file.read()
+    raw_text = extract_text_hybrid(pdf_bytes)
+
+    if not raw_text.strip():
+        raise HTTPException(status_code=422, detail="No se pudo extraer contenido del archivo.")
+
+    # 1. Reglas determinísticas
+    chunks = create_chunks(raw_text, chunk_size=500, chunk_overlap=50)
+    rule_assessment = risk_engine.assess_risk(chunks)
+
+    # 2. Inferencia con Llama 3.1 (Ollama)
+    llm_assessment = None
+    if use_llm:
+        llm_assessment = llm_service.analyze_contract_semantics(raw_text)
+
+    return {
+        "filename": file.filename,
+        "total_characters": len(raw_text),
+        "total_chunks": len(chunks),
+        "rule_scoring": rule_assessment,
+        "ai_llm_analysis": llm_assessment
+    }
 
 @app.post("/v1/evaluate-risk", response_model=RiskAssessmentResponse, summary="Evaluar riesgos normativos directamente sobre texto o chunks")
 async def evaluate_risk(request: EvaluateRiskRequest):
