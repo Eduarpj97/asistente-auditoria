@@ -1,4 +1,4 @@
-﻿# Paso 7: Inferencia Local con Ollama y Modelos Open-Weights (Opción 3 de IA)
+# Paso 7: Inferencia Local con Ollama y Modelos Open-Weights (Opción 3 de IA)
 
 **Proyecto**: Audiflow — Asistente de Auditoría y Cumplimiento Regulatorio para Contratos  
 **Autor**: Eduardo (@Eduarpj97)  
@@ -84,3 +84,28 @@ volumes:
 | **Dependencia de Internet** | Requiere conexión continua 24/7 | Funciona completamente offline | **Gana Ollama (Alta disponibilidad)** |
 | **Consumo de Hardware** | Cero cómputo local | Requiere CPU moderna o GPU | **Gana Cloud (Ligero)** |
 | **Facilidad de Auditoría** | Caja negra | Control total sobre pesos y versiones | **Gana Ollama (Transparencia)** |
+
+---
+
+## 5. Despliegue en VPS Oracle Cloud (Arquitectura Ampere A1 ARM64)
+
+Para entornos de auditoría remotos o de demostración académica, Audiflow se despliega en una máquina virtual de Oracle Cloud Infrastructure (OCI) con procesador ARM64 Ampere A1 (4 OCPUs, 24 GB RAM):
+
+### Optimización de Red y Fragmentación (TCP MSS Clamping)
+Debido a que Oracle Cloud utiliza interfaces virtuales con soporte de tramas Jumbo (MTU 9000), las conexiones residenciales estándar (MTU 1500) pueden sufrir descartes de paquetes en respuestas HTTP voluminosas generadas por el LLM.
+
+Para garantizar la transmisión fluida y sin desconexiones (`Connection was reset`), se implementó la fijación de MSS a nivel del kernel mediante `iptables`:
+
+```bash
+# Limpiar y fijar MSS a 1200 bytes en el handshake de entrada y salida
+sudo iptables -t mangle -F
+sudo iptables -t mangle -A PREROUTING -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --set-mss 1200
+sudo iptables -t mangle -A POSTROUTING -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --set-mss 1200
+
+# Persistir reglas para reinicios
+sudo apt-get install -y iptables-persistent
+sudo netfilter-persistent save
+```
+
+### Configuración de Inferencia Multihilo
+En `llm_audit_service.py` se parametrizó la inferencia con `num_thread: 4` para aprovechar los 4 núcleos físicos ARM64 y un límite de tokens `num_predict: 512`, logrando análisis semánticos jurídicos completos en ~30-45 segundos sin saturación de memoria.

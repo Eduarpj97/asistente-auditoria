@@ -1,4 +1,4 @@
-﻿# services/llm_audit_service.py
+# services/llm_audit_service.py
 import os
 import json
 import time
@@ -84,7 +84,8 @@ class LLMAuditService:
             "format": "json",
             "options": {
                 "temperature": 0.1,  # Máxima fidelidad y consistencia jurídica
-                "num_predict": 1024
+                "num_predict": 512,  # Suficiente para el JSON de auditoría sin demoras excesivas
+                "num_thread": 4      # Aprovechar los 4 OCPUs de la instancia Ampere A1
             }
         }
 
@@ -96,7 +97,7 @@ class LLMAuditService:
                 headers={"Content-Type": "application/json"},
                 method="POST"
             )
-            with urllib.request.urlopen(req, timeout=45) as resp:
+            with urllib.request.urlopen(req, timeout=120) as resp:
                 if resp.status == 200:
                     raw_data = json.loads(resp.read().decode("utf-8"))
                     content = raw_data.get("message", {}).get("content", "{}")
