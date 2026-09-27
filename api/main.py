@@ -1,6 +1,10 @@
-﻿import uvicorn
+﻿import os
+import uvicorn
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+
 from services.ocr_service import extract_text_hybrid
 from services.chunk_service import create_chunks
 from services.risk_scoring_service import risk_engine
@@ -12,21 +16,40 @@ from schemas import (
     RiskRuleInfo
 )
 
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+
 app = FastAPI(
     title="Audiflow - Regulatory Risk Scoring & AI Contract Audit API",
-    description="API integral de auditoría de contratos financieros y de software. Combina motor de reglas determinísticas (RGPD, AML, ISO 27001) e inferencia semántica con Llama 3.1 (Ollama).",
+    description="Plataforma de auditoría inteligente de contratos. Combina motor de scoring normativo determinístico e inferencia semántica con Llama 3.1 en Oracle Cloud.",
     version="1.2.0"
 )
 
-@app.get("/", include_in_schema=False)
-async def redirect_to_docs():
+# Permitir CORS para cualquier cliente frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Servir archivos estáticos
+if os.path.exists(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+@app.get("/", summary="Dashboard Web de Audiflow")
+async def serve_dashboard():
+    """Servir el panel visual interactivo de Audiflow."""
+    index_path = os.path.join(STATIC_DIR, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
     return RedirectResponse(url="/docs")
 
 @app.get("/v1/health", summary="Estado del sistema y conectividad con la VPS de Ollama")
 async def health_check():
     """
     Retorna el estado de salud de la API y la conectividad en tiempo real
-    con el servicio de inferencia Llama 3.1 (Ollama en VPS de Oracle o local).
+    con el servicio de inferencia Llama 3.1 en la VPS de Oracle Cloud.
     """
     ollama_status = llm_service.check_health()
     return {
@@ -73,9 +96,9 @@ async def audit_contract_ai(
 ):
     """
     Endpoint insignia de Audiflow:
-    1. Extrae el texto del PDF.
-    2. Ejecuta el motor de scoring de reglas (Semáforo Rojo/Amarillo/Verde).
-    3. Invoca a Llama 3.1 en Ollama para extraer cláusulas críticas y recomendaciones de negociación.
+    1. Extrae el texto del contrato en PDF.
+    2. Ejecuta el motor de scoring de 14 reglas normativas (RGPD, AML, Anticorrupción, ISO 27001).
+    3. Invoca a Llama 3.1 en la VPS de Oracle Cloud para extraer cláusulas críticas y recomendaciones.
     """
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Formato no soportado. Debe ser un PDF.")
@@ -86,11 +109,11 @@ async def audit_contract_ai(
     if not raw_text.strip():
         raise HTTPException(status_code=422, detail="No se pudo extraer contenido del archivo.")
 
-    # 1. Reglas determinísticas
+    # 1. Reglas normativas determinísticas
     chunks = create_chunks(raw_text, chunk_size=500, chunk_overlap=50)
     rule_assessment = risk_engine.assess_risk(chunks)
 
-    # 2. Inferencia con Llama 3.1 (Ollama)
+    # 2. Inferencia semántica con Llama 3.1 en VPS
     llm_assessment = None
     if use_llm:
         llm_assessment = llm_service.analyze_contract_semantics(raw_text)
@@ -122,8 +145,7 @@ async def evaluate_risk(request: EvaluateRiskRequest):
 @app.get("/v1/risk-rules", response_model=list[RiskRuleInfo], summary="Consultar catálogo de reglas normativas y ponderaciones")
 async def get_risk_rules():
     """
-    Retorna el catálogo activo de reglas normativas evaluadas por el motor,
-    incluyendo severidad, ponderación e instrucciones de mitigación.
+    Retorna el catálogo activo de reglas normativas evaluadas por el motor.
     """
     return risk_engine.get_rules_info()
 
