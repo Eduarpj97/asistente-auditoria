@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -31,10 +31,16 @@
                 </div>
             </div>
 
-            <!-- Server Status Badge -->
-            <div id="statusBadge" class="flex items-center space-x-2 text-xs px-3 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
-                <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse" id="statusDot"></span>
-                <span id="statusText" class="text-slate-300 font-medium">Verificando motor Ollama...</span>
+            <!-- Server & DB Status Badges -->
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                <div id="dbBadge" class="flex items-center space-x-2 text-xs px-3 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
+                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse" id="dbDot"></span>
+                    <span id="dbText" class="text-slate-300 font-medium">Supabase DB...</span>
+                </div>
+                <div id="statusBadge" class="flex items-center space-x-2 text-xs px-3 py-1.5 rounded-full bg-slate-800/80 border border-slate-700">
+                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse" id="statusDot"></span>
+                    <span id="statusText" class="text-slate-300 font-medium">Verificando Ollama...</span>
+                </div>
             </div>
         </div>
     </header>
@@ -149,6 +155,10 @@
                                 <span class="text-xs uppercase tracking-wider font-semibold text-slate-400">Dictamen de Cumplimiento</span>
                                 <h3 id="trafficLabel" class="text-2xl font-black mt-1">Riesgo Calculado</h3>
                                 <p id="docMeta" class="text-xs text-slate-400 mt-1">documento.pdf | 1,450 caracteres</p>
+                                <div id="dbSavedBadge" class="hidden mt-2 inline-flex items-center space-x-1.5 text-[11px] px-2.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
+                                    <i class="fa-solid fa-database text-[10px]"></i>
+                                    <span>Guardado en Supabase ID: <strong id="dbSavedId">-</strong></span>
+                                </div>
                             </div>
                             <div class="flex items-center space-x-3">
                                 <div id="trafficBadge" class="px-5 py-2.5 rounded-xl font-extrabold text-lg flex items-center space-x-2">
@@ -218,9 +228,13 @@
 
         // Check health on load
         async function checkHealth() {
+            const dbDot = document.getElementById('dbDot');
+            const dbText = document.getElementById('dbText');
             try {
                 const res = await fetch('/v1/health');
                 const data = await res.json();
+                
+                // Ollama VPS
                 if (data.ollama_engine && data.ollama_engine.status === 'ONLINE') {
                     statusDot.className = 'w-2 h-2 rounded-full bg-emerald-400';
                     statusText.textContent = 'Llama 3.1 VPS: En Línea (' + (data.ollama_engine.latencia_ms || 'OK') + ' ms)';
@@ -228,9 +242,22 @@
                     statusDot.className = 'w-2 h-2 rounded-full bg-amber-400';
                     statusText.textContent = 'Ollama Local / Offline';
                 }
+
+                // Supabase Database
+                if (data.supabase_database && data.supabase_database.status === 'ONLINE') {
+                    dbDot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+                    dbText.textContent = 'Supabase DB: Conectada (' + (data.supabase_database.latency_ms || 'OK') + ' ms)';
+                } else {
+                    dbDot.className = 'w-2 h-2 rounded-full bg-red-400';
+                    dbText.textContent = 'Supabase DB: Desconectada';
+                }
             } catch (e) {
                 statusDot.className = 'w-2 h-2 rounded-full bg-red-400';
                 statusText.textContent = 'API Desconectada';
+                if (dbDot && dbText) {
+                    dbDot.className = 'w-2 h-2 rounded-full bg-red-400';
+                    dbText.textContent = 'DB Desconectada';
+                }
             }
         }
         checkHealth();
@@ -340,6 +367,16 @@
             }
 
             document.getElementById('docMeta').textContent = data.filename + ' | ' + data.total_characters.toLocaleString() + ' caracteres extraídos (' + data.total_chunks + ' chunks)';
+
+            // Supabase persistence badge
+            const dbSavedBadge = document.getElementById('dbSavedBadge');
+            const dbSavedId = document.getElementById('dbSavedId');
+            if (data.database_persistence && data.database_persistence.saved) {
+                dbSavedBadge.classList.remove('hidden');
+                dbSavedId.textContent = data.database_persistence.document_id;
+            } else {
+                dbSavedBadge.classList.add('hidden');
+            }
 
             // Executive Summary
             const summary = llm.resumen_ejecutivo || rule.executive_summary || 'Auditoría completada.';

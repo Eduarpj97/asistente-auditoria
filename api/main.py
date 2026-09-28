@@ -1,14 +1,20 @@
-﻿import os
+import os
 import uvicorn
+from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+# Cargar variables de entorno
+load_dotenv()
+
+from database import check_db_health
 from services.ocr_service import extract_text_hybrid
 from services.chunk_service import create_chunks
 from services.risk_scoring_service import risk_engine
 from services.llm_audit_service import llm_service
+from services.db_service import db_service
 from schemas import (
     ProcessingResponse,
     RiskAssessmentResponse,
@@ -20,7 +26,7 @@ STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 
 app = FastAPI(
     title="Audiflow - Regulatory Risk Scoring & AI Contract Audit API",
-    description="Plataforma de auditoría inteligente de contratos. Combina motor de scoring normativo determinístico e inferencia semántica con Llama 3.1 en Oracle Cloud.",
+    description="Plataforma de auditoría inteligente de contratos. Combina motor de scoring normativo determinístico, inferencia semántica con Llama 3.1 en Oracle Cloud y persistencia en Supabase.",
     version="1.2.0"
 )
 
@@ -45,18 +51,20 @@ async def serve_dashboard():
         return FileResponse(index_path)
     return RedirectResponse(url="/docs")
 
-@app.get("/v1/health", summary="Estado del sistema y conectividad con la VPS de Ollama")
+@app.get("/v1/health", summary="Estado del sistema, conectividad con Ollama y Supabase")
 async def health_check():
     """
     Retorna el estado de salud de la API y la conectividad en tiempo real
-    con el servicio de inferencia Llama 3.1 en la VPS de Oracle Cloud.
+    con el servicio de inferencia Llama 3.1 en Oracle Cloud y la base de datos Supabase.
     """
     ollama_status = llm_service.check_health()
+    db_status = check_db_health()
     return {
         "api_status": "ONLINE",
         "service": "Audiflow API",
         "version": "1.2.0",
-        "ollama_engine": ollama_status
+        "ollama_engine": ollama_status,
+        "supabase_database": db_status
     }
 
 @app.post("/v1/process-pdf", response_model=ProcessingResponse, summary="Procesar PDF y evaluar riesgos normativos")
@@ -89,7 +97,7 @@ async def process_pdf(
         risk_assessment=risk_assessment
     )
 
-@app.post("/v1/audit-contract-ai", summary="Auditoría híbrida avanzada (Reglas Normativas + IA Llama 3.1)")
+@app.post("/v1/audit-contract-ai", summary="Auditoría híbrida avanzada (Reglas Normativas + IA Llama 3.1 + Supabase)")
 async def audit_contract_ai(
     file: UploadFile = File(...),
     use_llm: bool = Form(True, description="Incluir análisis semántico profundo con Llama 3.1")
@@ -99,6 +107,7 @@ async def audit_contract_ai(
     1. Extrae el texto del contrato en PDF.
     2. Ejecuta el motor de scoring de 14 reglas normativas (RGPD, AML, Anticorrupción, ISO 27001).
     3. Invoca a Llama 3.1 en la VPS de Oracle Cloud para extraer cláusulas críticas y recomendaciones.
+    4. Persiste el documento, fragmentos OCR, cláusulas y riesgos en Supabase.
     """
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Formato no soportado. Debe ser un PDF.")
@@ -118,13 +127,37 @@ async def audit_contract_ai(
     if use_llm:
         llm_assessment = llm_service.analyze_contract_semantics(raw_text)
 
+    # 3. Guardar automáticamente en Supabase
+    db_result = db_service.save_audit(
+        filename=file.filename,
+        file_bytes=pdf_bytes,
+        raw_text=raw_text,
+        chunks=chunks,
+        rule_assessment=rule_assessment,
+        llm_assessment=llm_assessment
+    )
+
     return {
         "filename": file.filename,
         "total_characters": len(raw_text),
         "total_chunks": len(chunks),
         "rule_scoring": rule_assessment,
-        "ai_llm_analysis": llm_assessment
+        "ai_llm_analysis": llm_assessment,
+        "database_persistence": db_result
     }
+
+@app.get("/v1/contracts", summary="Listar contratos auditados guardados en Supabase")
+async def list_contracts(limit: int = 20):
+    """Obtiene la lista de los últimos contratos auditados y almacenados en Supabase."""
+    return db_service.list_contracts(limit=limit)
+
+@app.get("/v1/contracts/{document_id}", summary="Consultar detalle de contrato, riesgos y cláusulas")
+async def get_contract_details(document_id: str):
+    """Obtiene la trazabilidad completa de un contrato auditado por su identificador UUID."""
+    details = db_service.get_contract_details(document_id)
+    if not details or not details.get("documento"):
+        raise HTTPException(status_code=404, detail="Contrato no encontrado en la base de datos.")
+    return details
 
 @app.post("/v1/evaluate-risk", response_model=RiskAssessmentResponse, summary="Evaluar riesgos normativos directamente sobre texto o chunks")
 async def evaluate_risk(request: EvaluateRiskRequest):
