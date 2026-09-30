@@ -6,7 +6,7 @@ import urllib.request
 import urllib.error
 from typing import Dict, Any, Optional
 
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://150.136.54.218:11434")
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://132.145.198.1:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
 
 class LLMAuditService:
@@ -45,26 +45,26 @@ class LLMAuditService:
                 "instrucciones": "Verifique que el puerto 11434 de su VPS esté abierto o inicie Ollama localmente."
             }
 
-    def analyze_contract_semantics(self, contract_text: str, max_chars: int = 12000) -> Dict[str, Any]:
+    def analyze_contract_semantics(self, contract_text: str, max_chars: int = 3500) -> Dict[str, Any]:
         """
         Envía el contrato al modelo Llama 3.1 en la VPS para auditoría semántica profunda.
         """
-        # Truncar razonablemente para el contexto si el documento es masivo
+        # Truncar para optimizar el tiempo de atención y procesamiento en CPU
         sample_text = contract_text[:max_chars]
 
         system_prompt = (
-            "Eres Audiflow, un auditor legal de élite especializado en contratos de software, SLAs y acuerdos financieros. "
-            "Analiza el siguiente contrato y evalúa los riesgos legales y financieros. "
+            "Eres Audiflow, un auditor legal de élite especializado en contratos de software y acuerdos financieros. "
+            "Analiza el contrato y evalúa los riesgos legales y financieros. "
             "Debes responder OBLIGATORIAMENTE en formato JSON válido con esta estructura exacta:\n"
             "{\n"
             '  "score_riesgo_ia": <numero entero 0-100>,\n'
             '  "nivel_riesgo_ia": "<ALTO | MEDIO | BAJO>",\n'
-            '  "resumen_ejecutivo": "<resumen claro de 2 o 3 párrafos en lenguaje no legal>",\n'
+            '  "resumen_ejecutivo": "<síntesis concisa de 2 o 3 oraciones del riesgo global>",\n'
             '  "clausulas_criticas": [\n'
             '    {\n'
             '      "tipo": "<SLA | Penalidad | Renovacion | Responsabilidad | Privacidad | Jurisdiccion>",\n'
             '      "severidad": "<ALTO | MEDIO | BAJO>",\n'
-            '      "cita_textual": "<fragmento exacto del contrato>",\n'
+            '      "cita_textual": "<fragmento breve del contrato>",\n'
             '      "explicacion_riesgo": "<por qué es riesgoso>",\n'
             '      "recomendacion_negociacion": "<qué pedir al proveedor>"\n'
             '    }\n'
@@ -82,10 +82,12 @@ class LLMAuditService:
             ],
             "stream": False,
             "format": "json",
+            "keep_alive": -1,
             "options": {
                 "temperature": 0.1,  # Máxima fidelidad y consistencia jurídica
-                "num_predict": 512,  # Suficiente para el JSON de auditoría sin demoras excesivas
-                "num_thread": 4      # Aprovechar los 4 OCPUs de la instancia Ampere A1
+                "num_ctx": 1536,     # Contexto balanceado para agilidad en CPU ARM
+                "num_predict": 180,  # Dictamen y cláusulas críticas concisas
+                "num_thread": 3      # 3 hilos: 3x más rápido en Ampere A1 (evita contención de cache)
             }
         }
 
@@ -97,7 +99,7 @@ class LLMAuditService:
                 headers={"Content-Type": "application/json"},
                 method="POST"
             )
-            with urllib.request.urlopen(req, timeout=120) as resp:
+            with urllib.request.urlopen(req, timeout=180) as resp:
                 if resp.status == 200:
                     raw_data = json.loads(resp.read().decode("utf-8"))
                     content = raw_data.get("message", {}).get("content", "{}")
