@@ -1,0 +1,5 @@
+{
+  "name": "Audiflow - Asistente de Auditoría y Cumplimiento Regulatorio",
+  "description": "Plataforma integral de auditoría de contratos de software y financieros impulsada por Llama 3.1 (Ollama), 14 controles regulatorios normativos (RGPD, SARLAFT, FCPA, ISO 27001) y persistencia en Supabase.",
+  "version": "1.2.0"
+}
