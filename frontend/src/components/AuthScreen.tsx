@@ -14,6 +14,7 @@ import {
   KeyRound,
   Loader2,
   Info,
+  Clock,
 } from 'lucide-react';
 import { AudiflowLogo } from './AudiflowLogo';
 import { User } from '../types/audit';
@@ -26,9 +27,10 @@ import {
 
 interface AuthScreenProps {
   onLoginSuccess: (user: User) => void;
+  inactivityNotice?: string | null;
 }
 
-export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
+export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess, inactivityNotice }) => {
   const [isRegister, setIsRegister] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -129,13 +131,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
     }
   };
 
-  const handleFillCorporateCredentials = () => {
-    setIsRegister(false);
-    setEmail('eduardo.pedroza@audiflow.com');
-    setPassword('Auditor2026!');
-    setErrorMessage('');
-  };
-
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#F8FAFC]">
       {/* LEFT COLUMN: AUTH CARD */}
@@ -191,6 +186,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
               Registrarse
             </button>
           </div>
+
+          {/* Inactivity Notice */}
+          {inactivityNotice && (
+            <div className="mb-4 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs sm:text-sm flex items-start gap-2.5 animate-in fade-in duration-200 shadow-2xs">
+              <Clock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-[#0F2744]">Cierre de sesión por inactividad</p>
+                <p className="mt-0.5 text-amber-800 leading-relaxed">{inactivityNotice}</p>
+              </div>
+            </div>
+          )}
 
           {/* Error Message */}
           {errorMessage && (
@@ -391,32 +397,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
                 </>
               )}
             </button>
-
-            {/* Corporate Registered Account Info Card */}
-            {!isRegister && (
-              <div className="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-xs text-slate-600 space-y-1.5">
-                <div className="flex items-center justify-between font-semibold text-[#0F2744]">
-                  <span className="flex items-center gap-1.5">
-                    <Info className="w-3.5 h-3.5 text-blue-600" />
-                    Cuenta corporativa registrada:
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleFillCorporateCredentials}
-                    className="text-[11px] text-blue-700 hover:text-blue-900 font-bold underline cursor-pointer"
-                  >
-                    Cargar credenciales
-                  </button>
-                </div>
-                <div className="text-[11px] text-slate-500 font-mono bg-white p-2 rounded-lg border border-slate-200/60">
-                  <div><strong>Email:</strong> eduardo.pedroza@audiflow.com</div>
-                  <div><strong>Clave:</strong> Auditor2026!</div>
-                </div>
-                <p className="text-[10px] text-slate-400">
-                  O puedes registrar tu propia cuenta real haciendo clic en la pestaña <strong>Registrarse</strong>.
-                </p>
-              </div>
-            )}
           </form>
         </div>
 

@@ -49,22 +49,15 @@ export function getRegisteredAccounts(): RegisteredAccount[] {
 }
 
 /**
- * Inicializar la base de datos de usuarios con la cuenta administrativa corporativa
+ * Inicializar la base de datos de usuarios purificando cuentas ficticias o corporativas pre-cargadas
  */
 export async function initializeUserDatabase(): Promise<void> {
   const existing = getRegisteredAccounts();
-  if (existing.length === 0) {
-    const defaultPasswordHash = await hashPassword('Auditor2026!');
-    const defaultAdmin: RegisteredAccount = {
-      id: 'usr-admin-corp',
-      name: 'Eduardo Pedroza',
-      email: 'eduardo.pedroza@audiflow.com',
-      company: 'Corporativo Legal Global S.A.',
-      role: 'Auditor Legal Senior',
-      passwordHash: defaultPasswordHash,
-      createdAt: new Date().toISOString(),
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([defaultAdmin]));
+  const cleaned = existing.filter(
+    (acc) => acc.id !== 'usr-admin-corp' && acc.email.toLowerCase() !== 'eduardo.pedroza@audiflow.com'
+  );
+  if (cleaned.length !== existing.length) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(cleaned));
   }
 }
 
@@ -180,12 +173,16 @@ export function saveActiveSession(user: User, remember: boolean): void {
 export function getActiveSession(): User | null {
   try {
     const local = localStorage.getItem(SESSION_KEY);
-    if (local) return JSON.parse(local);
-
     const session = sessionStorage.getItem(SESSION_KEY);
-    if (session) return JSON.parse(session);
+    const raw = local || session;
+    if (!raw) return null;
 
-    return null;
+    const user: User = JSON.parse(raw);
+    if (user.id === 'usr-admin-corp' || user.email?.toLowerCase() === 'eduardo.pedroza@audiflow.com') {
+      clearActiveSession();
+      return null;
+    }
+    return user;
   } catch {
     return null;
   }

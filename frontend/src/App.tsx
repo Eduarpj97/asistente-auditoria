@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AuthScreen } from './components/AuthScreen';
 import { Navbar, NavTab } from './components/Navbar';
 import { Dashboard } from './components/Dashboard';
@@ -11,11 +11,27 @@ import { exportToPDF, exportToWord } from './utils/reportExporter';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function App() {
-  // Authentication state
+  // Authentication state (purga automática de cuentas corporativas pre-cargadas)
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('audiflow_user');
-    return saved ? JSON.parse(saved) : null;
+    if (!saved) return null;
+    try {
+      const parsed: User = JSON.parse(saved);
+      if (parsed.id === 'usr-admin-corp' || parsed.email?.toLowerCase() === 'eduardo.pedroza@audiflow.com') {
+        localStorage.removeItem('audiflow_user');
+        sessionStorage.removeItem('audiflow_user');
+        return null;
+      }
+      return parsed;
+    } catch {
+      return null;
+    }
   });
+
+  // Inactivity timeout state (15 minutos de inactividad para compliance de seguridad)
+  const [inactivityNotice, setInactivityNotice] = useState<string | null>(null);
+  const lastActivityRef = useRef<number>(Date.now());
+  const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
 
   // Active Navigation Tab
   const [currentTab, setCurrentTab] = useState<NavTab>('dashboard');
@@ -74,16 +90,56 @@ export default function App() {
     localStorage.setItem('audiflow_deadlines', JSON.stringify(deadlines));
   }, [deadlines]);
 
+  // Cierre de sesión automático por inactividad (15 minutos)
+  useEffect(() => {
+    if (!currentUser) return;
+
+    lastActivityRef.current = Date.now();
+
+    const resetActivity = () => {
+      lastActivityRef.current = Date.now();
+    };
+
+    const activityEvents = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'];
+    activityEvents.forEach((event) => {
+      window.addEventListener(event, resetActivity, { passive: true });
+    });
+
+    const checkInterval = setInterval(() => {
+      const elapsed = Date.now() - lastActivityRef.current;
+      if (elapsed >= INACTIVITY_TIMEOUT_MS) {
+        setCurrentUser(null);
+        setSelectedAudit(null);
+        localStorage.removeItem('audiflow_user');
+        sessionStorage.removeItem('audiflow_user');
+        setInactivityNotice(
+          'Tu sesión se ha cerrado automáticamente tras 15 minutos sin interacción para proteger la confidencialidad de las auditorías y normativas.'
+        );
+      }
+    }, 10000);
+
+    return () => {
+      activityEvents.forEach((event) => {
+        window.removeEventListener(event, resetActivity);
+      });
+      clearInterval(checkInterval);
+    };
+  }, [currentUser]);
+
   // Auth Handlers
   const handleLogin = (user: User) => {
     setCurrentUser(user);
     setCurrentTab('dashboard');
+    setInactivityNotice(null);
     showToast(`¡Bienvenido a Audiflow, ${user.name}!`);
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
     setSelectedAudit(null);
+    setInactivityNotice(null);
+    localStorage.removeItem('audiflow_user');
+    sessionStorage.removeItem('audiflow_user');
     setCurrentTab('dashboard');
     showToast('Sesión cerrada correctamente.', 'info');
   };
@@ -158,7 +214,7 @@ export default function App() {
 
   // If user is not authenticated, show AuthScreen matching the uploaded design
   if (!currentUser) {
-    return <AuthScreen onLoginSuccess={handleLogin} />;
+    return <AuthScreen onLoginSuccess={handleLogin} inactivityNotice={inactivityNotice} />;
   }
 
   return (
