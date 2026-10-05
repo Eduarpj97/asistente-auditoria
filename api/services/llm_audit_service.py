@@ -13,6 +13,7 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
 SSH_KEY_PATH = os.getenv("OLLAMA_SSH_KEY", r"C:\Users\Eduardo\Desktop\Ollama 3.1.key")
 VPS_HOST = os.getenv("OLLAMA_VPS_HOST", "132.145.198.1")
 VPS_USER = os.getenv("OLLAMA_VPS_USER", "ubuntu")
+NORMATIVAS_URL = os.getenv("NORMATIVAS_URL", "https://audiflow-audit.abbynex.site/normativas/normativa_auditoria_vigente_2026.md")
 
 class LLMAuditService:
     """
@@ -173,15 +174,31 @@ class LLMAuditService:
                 "instrucciones": "Verifique la conectividad con la VPS o inicie Ollama localmente."
             }
 
+    def get_normativa_2026_summary(self) -> str:
+        """
+        Retorna las directrices esenciales del compendio regulatorio 2026
+        para inyectar en el contexto del modelo.
+        """
+        return (
+            "DIRECTRICES NORMATIVAS Y ESTATUTOS VIGENTES (ACTUALIZADO A 2026):\n"
+            "- AML/SARLAFT (2026): Identificación obligatoria de Beneficiarios Finales (UBO al 5%) y causal de rescisión unilateral inmediata por reporte en listas restrictivas (ONU/OFAC).\n"
+            "- PROTECCIÓN DE DATOS & IA (2026): Prohibición expresa de usar datos contractuales para reentrenar modelos de IA sin autorización previa. Notificación obligatoria de incidentes o brechas de seguridad en <72 horas.\n"
+            "- ANTICORRUPCIÓN (ISO 37001 / FCPA): Cero tolerancia a sobornos, dádivas o pagos de facilitación, y canales anónimos de denuncia protegidos.\n"
+            "- SEGURIDAD (ISO 27001:2022 / NIS2): Cifrado obligatorio en tránsito/reposo y derecho de auditoría técnica y forense.\n"
+            "- EQUILIBRIO CONTRACTUAL: Nulidad absoluta de cláusulas que exoneren de responsabilidad por dolo o culpa grave. SLAs con compensación económica obligatoria.\n"
+        )
+
     def analyze_contract_semantics(self, contract_text: str, max_chars: int = 3500) -> Dict[str, Any]:
         """
-        Envía el contrato al modelo Llama 3.1 para auditoría semántica profunda.
+        Envía el contrato al modelo Llama 3.1 para auditoría semántica profunda aplicando las normativas 2026.
         """
         sample_text = self._sanitize_text(contract_text, max_chars)
+        normativas_ref = self.get_normativa_2026_summary()
 
         system_prompt = (
-            "Eres Audiflow, un auditor legal de élite especializado en contratos de software y acuerdos financieros. "
-            "Analiza el contrato y evalúa los riesgos legales y financieros. "
+            "Eres Audiflow, un auditor legal de élite especializado en contratos y acuerdos financieros. "
+            "Evalúa el contrato aplicando ESTRICTAMENTE las directrices y estatutos normativos vigentes:\n"
+            f"{normativas_ref}\n"
             "Debes responder OBLIGATORIAMENTE en formato JSON válido con esta estructura exacta:\n"
             "{\n"
             '  "score_riesgo_ia": <numero entero 0-100>,\n'
@@ -189,7 +206,7 @@ class LLMAuditService:
             '  "resumen_ejecutivo": "<síntesis concisa de 2 oraciones del riesgo global en lenguaje simple>",\n'
             '  "clausulas_criticas": [\n'
             '    {\n'
-            '      "tipo": "<SLA | Penalidad | Renovacion | Responsabilidad | Privacidad | Jurisdiccion>",\n'
+            '      "tipo": "<SLA | Penalidad | Renovacion | Responsabilidad | Privacidad | IA | AML | Anticorrupcion>",\n'
             '      "severidad": "<ALTO | MEDIO | BAJO>",\n'
             '      "cita_textual": "<fragmento breve del contrato>",\n'
             '      "explicacion_riesgo": "<por qué es riesgoso en 1 oracion>",\n'

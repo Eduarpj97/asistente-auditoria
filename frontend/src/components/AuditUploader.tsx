@@ -134,7 +134,11 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
       formData.append('file', fileToUpload, uploadFileName);
       formData.append('use_llm', 'true');
 
-      const response = await fetch('http://127.0.0.1:8000/v1/audit-contract-ai', {
+      const apiUrl = window.location.origin.includes(':3000')
+        ? 'http://127.0.0.1:8000/v1/audit-contract-ai'
+        : '/v1/audit-contract-ai';
+
+      const response = await fetch(apiUrl, {
         method: 'POST',
         body: formData,
       });

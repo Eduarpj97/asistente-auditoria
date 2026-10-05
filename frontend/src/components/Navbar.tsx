@@ -146,6 +146,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span className={`w-2 h-2 rounded-full ${dbOnline ? 'bg-emerald-500' : 'bg-amber-500'}`} />
                 <span className="text-slate-700">Supabase DB: {dbOnline ? 'ONLINE' : 'DESCONECTADA'}</span>
               </div>
+              <a
+                href="https://audiflow-audit.abbynex.site/normativas/normativa_auditoria_vigente_2026.md"
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 transition-colors"
+                title="Ver compendio oficial de normativas y estatutos de auditoría vigentes (2026)"
+              >
+                <span className="w-2 h-2 rounded-full bg-blue-500" />
+                <span>Normativas 2026 (.md)</span>
+              </a>
             </div>
 
             {/* Quick Upload CTA (Desktop) */}

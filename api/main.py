@@ -182,5 +182,34 @@ async def get_risk_rules():
     """
     return risk_engine.get_rules_info()
 
+@app.get("/v1/normativas-vigentes", summary="Consultar compendio oficial de normativas y estatutos vigentes (2026)")
+async def get_normativas_vigentes():
+    """
+    Retorna el compendio oficial de directrices normativas aplicadas en la auditoría inteligente.
+    """
+    normativa_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "normativas", "normativa_auditoria_vigente_2026.md")
+    if not os.path.exists(normativa_path):
+        normativa_path = os.path.join(STATIC_DIR, "normativas", "normativa_auditoria_vigente_2026.md")
+    
+    contenido = ""
+    if os.path.exists(normativa_path):
+        with open(normativa_path, "r", encoding="utf-8") as f:
+            contenido = f.read()
+
+    return {
+        "titulo": "Estatutos y Lineamientos Normativos de Auditoría Contractual",
+        "vigencia": "Actualizado a 2026",
+        "url_documento_publico": "https://audiflow-audit.abbynex.site/normativas/normativa_auditoria_vigente_2026.md",
+        "formato": "Markdown (.md)",
+        "ejes_regulatorios": [
+            "Prevención de Lavado de Activos y FT (GAFI / SARLAFT / UBO al 5%)",
+            "Protección de Datos, Privacidad y Regulación de IA (RGPD / Habeas Data / AI Act)",
+            "Anticorrupción, Ética y Antisoborno (FCPA / ISO 37001)",
+            "Seguridad de la Información y Ciberseguridad (ISO 27001:2022 / NIS2)",
+            "Equilibrio Contractual, Responsabilidad y SLAs"
+        ],
+        "contenido_markdown": contenido
+    }
+
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
