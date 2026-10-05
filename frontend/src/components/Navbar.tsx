@@ -94,8 +94,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               <AudiflowLogo size="md" variant="full" />
             </button>
 
-            {/* Desktop Navigation Links */}
-            <nav className="hidden lg:flex items-center space-x-1 ml-4">
+            {/* Desktop Navigation Links (Apple Segmented Control Style) */}
+            <nav className="hidden lg:flex items-center space-x-1 ml-4 bg-slate-100/80 p-1 rounded-2xl border border-slate-200/50">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = currentTab === item.id;
@@ -103,13 +103,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <button
                     key={item.id}
                     onClick={() => onTabChange(item.id)}
-                    className={`relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer ${
+                    className={`relative flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 cursor-pointer active:scale-95 ${
                       isActive
-                        ? 'bg-[#0F2744] text-white shadow-sm'
-                        : 'text-slate-600 hover:text-[#0F2744] hover:bg-slate-100'
+                        ? 'bg-white text-[#0F2744] shadow-xs'
+                        : 'text-slate-600 hover:text-[#0F2744] hover:bg-white/50'
                     }`}
                   >
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-blue-300' : 'text-slate-400'}`} />
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-[#2563EB]' : 'text-slate-400'}`} />
                     <span>{item.label}</span>
                     {item.badge && (
                       <span
@@ -130,33 +130,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Right Action Icons & User Profile */}
           <div className="flex items-center gap-2.5 sm:gap-3">
-            {/* Status Badges for Llama 3.1 & Supabase */}
-            <div className="hidden lg:flex items-center gap-2">
-              <div
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-50 border border-slate-200"
-                title="Motor de inferencia Llama 3.1 8B en Oracle Cloud VPS"
-              >
-                <span className={`w-2 h-2 rounded-full ${ollamaOnline ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-                <span className="text-slate-700">Llama 3.1: {ollamaOnline ? 'ONLINE' : 'OFFLINE'}</span>
-              </div>
-              <div
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-50 border border-slate-200"
-                title="Base de datos en la nube Supabase"
-              >
-                <span className={`w-2 h-2 rounded-full ${dbOnline ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                <span className="text-slate-700">Supabase DB: {dbOnline ? 'ONLINE' : 'DESCONECTADA'}</span>
-              </div>
-              <a
-                href="https://audiflow-audit.abbynex.site/normativas/normativa_auditoria_vigente_2026.md"
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 transition-colors"
-                title="Ver compendio oficial de normativas y estatutos de auditoría vigentes (2026)"
-              >
-                <span className="w-2 h-2 rounded-full bg-blue-500" />
-                <span>Normativas 2026 (.md)</span>
-              </a>
-            </div>
 
             {/* Quick Upload CTA (Desktop) */}
             <button
@@ -335,6 +308,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <FileText className="w-4 h-4 text-slate-400" />
                       <span>Mis Documentos Auditados</span>
                     </button>
+                    <a
+                      href="https://audiflow-audit.abbynex.site/normativas/normativa_auditoria_vigente_2026.md"
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() => setIsProfileOpen(false)}
+                      className="w-full text-left px-3 py-2 text-xs text-blue-700 hover:bg-blue-50 rounded-lg font-medium flex items-center gap-2 cursor-pointer transition-colors"
+                    >
+                      <FileCheck className="w-4 h-4 text-blue-600" />
+                      <span>Normativas Vigentes 2026 (.md)</span>
+                    </a>
                   </div>
                   <div className="border-t border-slate-100 p-1">
                     <button

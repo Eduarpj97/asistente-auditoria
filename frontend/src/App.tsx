@@ -6,46 +6,45 @@ import { AuditUploader } from './components/AuditUploader';
 import { AuditHistory } from './components/AuditHistory';
 import { AuditResultView } from './components/AuditResultView';
 import { DeadlineAlerts } from './components/DeadlineAlerts';
-import { INITIAL_AUDITS } from './data/sampleAudits';
 import { ContractAudit, User, KeyDeadline } from './types/audit';
 import { exportToPDF, exportToWord } from './utils/reportExporter';
-import { clearActiveSession } from './utils/authService';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function App() {
-  // Authentication state - Carga sesión real y descarta sesiones demo legadas
+  // Authentication state
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('audiflow_user') || sessionStorage.getItem('audiflow_user');
-    if (!saved) return null;
-    try {
-      const parsed = JSON.parse(saved);
-      if (parsed.id === 'usr-demo' || parsed.id === 'usr-101' || parsed.email === 'eduardo.auditor@audiflow.com') {
-        localStorage.removeItem('audiflow_user');
-        sessionStorage.removeItem('audiflow_user');
-        return null;
-      }
-      return parsed;
-    } catch {
-      return null;
-    }
+    const saved = localStorage.getItem('audiflow_user');
+    return saved ? JSON.parse(saved) : null;
   });
 
   // Active Navigation Tab
   const [currentTab, setCurrentTab] = useState<NavTab>('dashboard');
 
-  // Audits repository (Inicia limpio en 0)
+  // Audits repository (100% reales, sin simulaciones ni datos de relleno)
   const [audits, setAudits] = useState<ContractAudit[]>(() => {
-    const saved = localStorage.getItem('audiflow_audits_v2');
-    return saved ? JSON.parse(saved) : [];
+    const saved = localStorage.getItem('audiflow_audits');
+    if (!saved) return [];
+    try {
+      const parsed: ContractAudit[] = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed.filter((a) => !a.id.startsWith('aud-2026-00')) : [];
+    } catch {
+      return [];
+    }
   });
 
   // Selected audit for detail inspection
   const [selectedAudit, setSelectedAudit] = useState<ContractAudit | null>(null);
 
-  // Key deadlines pool (Inicia limpio en 0)
+  // Key deadlines pool (derivado exclusivamente de auditorías reales)
   const [deadlines, setDeadlines] = useState<KeyDeadline[]>(() => {
-    const saved = localStorage.getItem('audiflow_deadlines_v2');
-    return saved ? JSON.parse(saved) : [];
+    const saved = localStorage.getItem('audiflow_deadlines');
+    if (!saved) return [];
+    try {
+      const parsed: KeyDeadline[] = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed.filter((d) => !d.contractId?.startsWith('aud-2026-00')) : [];
+    } catch {
+      return [];
+    }
   });
 
   // Toast notification state
@@ -68,11 +67,11 @@ export default function App() {
   }, [currentUser]);
 
   useEffect(() => {
-    localStorage.setItem('audiflow_audits_v2', JSON.stringify(audits));
+    localStorage.setItem('audiflow_audits', JSON.stringify(audits));
   }, [audits]);
 
   useEffect(() => {
-    localStorage.setItem('audiflow_deadlines_v2', JSON.stringify(deadlines));
+    localStorage.setItem('audiflow_deadlines', JSON.stringify(deadlines));
   }, [deadlines]);
 
   // Auth Handlers
@@ -83,7 +82,6 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    clearActiveSession();
     setCurrentUser(null);
     setSelectedAudit(null);
     setCurrentTab('dashboard');

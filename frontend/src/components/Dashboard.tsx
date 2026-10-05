@@ -50,9 +50,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
   );
   const totalFindings = filteredAudits.reduce((acc, a) => acc + a.clauses.filter(c => !c.compliant).length, 0);
   const totalCriticalRisks = filteredAudits.reduce(
-    (acc, a) => acc + a.risksIdentified.filter(r => r.severity === 'critical' || r.severity === 'high').length,
+    (acc, a) => acc + (a.risksIdentified || []).filter(r => r.severity === 'critical' || r.severity === 'high').length,
     0
   );
+
+  // Dynamic Risk Distribution Counts & Percentages (100% Real)
+  const lowCount = filteredAudits.filter(a => a.overallRiskScore <= 35).length;
+  const mediumCount = filteredAudits.filter(a => a.overallRiskScore > 35 && a.overallRiskScore <= 60).length;
+  const highCount = filteredAudits.filter(a => a.overallRiskScore > 60).length;
+  const lowPct = totalAudits > 0 ? Math.round((lowCount / totalAudits) * 100) : 0;
+  const medPct = totalAudits > 0 ? Math.round((mediumCount / totalAudits) * 100) : 0;
+  const highPct = totalAudits > 0 ? Math.round((highCount / totalAudits) * 100) : 0;
 
   // Category breakdown for horizontal bar chart
   const categoryStats = useMemo(() => {
@@ -124,9 +132,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
             >
               <option value="today">Hoy (24 horas)</option>
               <option value="last7days">Últimos 7 días</option>
-              <option value="thisMonth">Este mes</option>
-              <option value="lastQuarter">Tercer Trimestre</option>
-              <option value="thisYear">Año en curso</option>
+              <option value="thisMonth">Este mes (Septiembre 2026)</option>
+              <option value="lastQuarter">Tercer Trimestre (Q3)</option>
+              <option value="thisYear">Año en curso 2026</option>
               <option value="all">Todo el Histórico</option>
             </select>
           </div>
@@ -140,55 +148,26 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      {/* Welcome Banner when empty */}
-      {totalAudits === 0 && (
-        <div className="bg-gradient-to-r from-[#0F2744] to-[#1E3E62] rounded-3xl p-6 sm:p-8 text-white shadow-md relative overflow-hidden">
-          <div className="relative z-10 max-w-2xl">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-200 border border-blue-400/30 mb-3">
-              <Sparkles className="w-3.5 h-3.5 text-blue-300" />
-              Plataforma Lista para Auditorías
-            </span>
-            <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight">
-              Bienvenido a Audiflow
-            </h2>
-            <p className="text-slate-300 text-xs sm:text-sm mt-2 leading-relaxed">
-              Aún no has realizado ninguna auditoría. Carga tu primer contrato en formato PDF para escanear automáticamente cada cláusula, evaluar riesgos normativos con Llama 3.1 y generar dictámenes jurídicos en segundos.
-            </p>
-            <div className="mt-5 flex flex-wrap gap-3">
-              <button
-                onClick={() => onNavigateTab('upload')}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-[#0F2744] bg-white hover:bg-slate-100 transition-all shadow-sm cursor-pointer"
-              >
-                <FileText className="w-4 h-4 text-[#0F2744]" />
-                <span>+ Cargar Primer Contrato</span>
-              </button>
-            </div>
-          </div>
-          <div className="absolute right-0 bottom-0 opacity-10 pointer-events-none transform translate-x-12 translate-y-8">
-            <FileText className="w-80 h-80 text-white" />
-          </div>
-        </div>
-      )}
-
-      {/* 4 Primary KPI Cards */}
+      {/* 4 Primary KPI Cards (Faithful to WhatsApp Image 1) */}
+      {/* 4 Primary KPI Cards (Real Data derived from Audits) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         {/* KPI 1: Auditorías activas */}
         <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs hover:shadow-md transition-shadow relative overflow-hidden group">
           <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-semibold text-slate-500">Auditorías Realizadas</span>
+            <span className="text-xs font-semibold text-slate-500">Auditorías Activas</span>
             <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
               <FileText className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline justify-between mt-3">
             <span className="text-3xl font-extrabold text-[#0F2744]">{totalAudits}</span>
-            <div className="flex items-center text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-              <span>{totalAudits > 0 ? '+100%' : '0%'}</span>
+            <div className="flex items-center text-xs font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+              <span>{totalAudits === 1 ? '1 contrato' : `${totalAudits} contratos`}</span>
             </div>
           </div>
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-            <span>Contratos en sistema</span>
-            <span className="font-semibold text-slate-600">{totalAudits} registros</span>
+            <span>Registros en sistema</span>
+            <span className="font-semibold text-slate-600">{totalAudits > 0 ? 'Actualizado' : 'Sin datos'}</span>
           </div>
         </div>
 
@@ -201,7 +180,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
           <div className="flex items-baseline justify-between mt-3">
-            <span className="text-3xl font-extrabold text-[#0F2744]">{totalAudits > 0 ? `${avgCompliance}%` : '0%'}</span>
+            <span className="text-3xl font-extrabold text-[#0F2744]">
+              {totalAudits > 0 ? `${avgCompliance}%` : '—'}
+            </span>
             <div className="relative w-8 h-8 flex items-center justify-center">
               <svg className="w-8 h-8 transform -rotate-90" viewBox="0 0 36 36">
                 <circle cx="18" cy="18" r="14" fill="none" stroke="#E2E8F0" strokeWidth="4" />
@@ -210,17 +191,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   cy="18"
                   r="14"
                   fill="none"
-                  stroke="#10B981"
+                  stroke={avgCompliance >= 80 ? '#10B981' : avgCompliance >= 60 ? '#F59E0B' : '#E11D48'}
                   strokeWidth="4"
-                  strokeDasharray={`${avgCompliance} 100`}
+                  strokeDasharray={`${totalAudits > 0 ? avgCompliance : 0} 100`}
                   strokeLinecap="round"
                 />
               </svg>
             </div>
           </div>
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-            <span>Promedio normativo</span>
-            <span className="font-bold text-emerald-600">{totalAudits > 0 ? `${avgCompliance}%` : 'Sin datos'}</span>
+            <span>Rango regulatorio</span>
+            <span className={`font-bold ${avgCompliance >= 80 ? 'text-emerald-600' : avgCompliance >= 60 ? 'text-amber-600' : 'text-slate-400'}`}>
+              {totalAudits > 0 ? (avgCompliance >= 80 ? 'Conforme (A)' : 'Observado') : 'Pendiente'}
+            </span>
           </div>
         </div>
 
@@ -234,13 +217,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
           <div className="flex items-baseline justify-between mt-3">
             <span className="text-3xl font-extrabold text-[#0F2744]">{totalFindings}</span>
-            <div className="flex items-center text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
-              <span>{totalFindings > 0 ? `${totalFindings} activos` : '0 activos'}</span>
+            <div className="flex items-center text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+              <span>Observaciones</span>
             </div>
           </div>
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
             <span>Cláusulas observadas</span>
-            <span className="font-semibold text-amber-600">{totalFindings === 0 ? 'Sin alertas' : `${totalFindings} detectadas`}</span>
+            <span className="font-semibold text-amber-600">{totalFindings} pendientes</span>
           </div>
         </div>
 
@@ -254,16 +237,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
           <div className="flex items-baseline justify-between mt-3">
             <span className="text-3xl font-extrabold text-rose-600">{totalCriticalRisks}</span>
-            <div className="flex items-center text-xs font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full">
+            <div className={`flex items-center text-xs font-bold px-2 py-0.5 rounded-full ${totalCriticalRisks > 0 ? 'text-rose-600 bg-rose-50' : 'text-slate-500 bg-slate-100'}`}>
               <AlertTriangle className="w-3.5 h-3.5 mr-0.5" />
-              <span>{totalCriticalRisks > 0 ? 'Atención' : 'Sin riesgos'}</span>
+              <span>{totalCriticalRisks > 0 ? 'Prioridad Alta' : 'Sin contingencias'}</span>
             </div>
           </div>
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-            <span>Cláusulas asimétricas</span>
+            <span>Contingencias críticas</span>
             <button
               onClick={() => onNavigateTab('alerts')}
-              className="text-rose-600 font-bold hover:underline"
+              className="text-rose-600 font-bold hover:underline cursor-pointer"
             >
               Revisar alertas →
             </button>
@@ -271,68 +254,164 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
-      {/* Row: Breakdown by Category & Urgent Deadlines Widget */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Category Breakdown (2 cols) */}
-        <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200/90 shadow-xs">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-base font-bold text-[#0F2744]">
-                Auditoría por Categoría de Cláusula
-              </h3>
-              <p className="text-xs text-slate-400">
-                Nivel de cumplimiento y porcentaje de cláusulas que requieren revisión.
-              </p>
-            </div>
-            <span className="text-xs font-semibold text-[#1E3E62] bg-blue-50 px-2.5 py-1 rounded-full">
-              6 Categorías evaluadas
-            </span>
-          </div>
+      {/* Analytics & Risk Breakdown Row (Balanced 3-Column Grid) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Card 1: Distribución de Riesgos (Donut) */}
+        <div className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-xs flex flex-col justify-between">
+          <div>
+            <h3 className="text-base font-bold text-[#0F2744]">
+              Distribución de Riesgos Contractuales
+            </h3>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Clasificación de contingencias detectadas en auditorías activas.
+            </p>
 
-          <div className="space-y-3.5 mt-4">
-            {filteredAudits.length === 0 ? (
-              <div className="py-8 text-center text-slate-400">
-                <Layers className="w-8 h-8 mx-auto mb-2 text-slate-300 stroke-[1.5]" />
-                <p className="text-xs font-semibold text-slate-600">Sin datos de categorías</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">El desglose por penalizaciones, SLAs y privacidad se habilitará tras la primera auditoría.</p>
+            {/* Donut Graphic */}
+            <div className="relative w-44 h-44 mx-auto my-6 flex items-center justify-center">
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                {/* Underlay */}
+                <circle cx="50" cy="50" r="38" fill="none" stroke="#F1F5F9" strokeWidth="12" />
+                {totalAudits > 0 && lowPct > 0 && (
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="38"
+                    fill="none"
+                    stroke="#10B981"
+                    strokeWidth="12"
+                    strokeDasharray={`${Math.round((lowPct / 100) * 239)} 239`}
+                    strokeDashoffset="0"
+                    strokeLinecap="round"
+                  />
+                )}
+                {totalAudits > 0 && medPct > 0 && (
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="38"
+                    fill="none"
+                    stroke="#F59E0B"
+                    strokeWidth="12"
+                    strokeDasharray={`${Math.round((medPct / 100) * 239)} 239`}
+                    strokeDashoffset={`-${Math.round((lowPct / 100) * 239)}`}
+                    strokeLinecap="round"
+                  />
+                )}
+                {totalAudits > 0 && highPct > 0 && (
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="38"
+                    fill="none"
+                    stroke="#E11D48"
+                    strokeWidth="12"
+                    strokeDasharray={`${Math.round((highPct / 100) * 239)} 239`}
+                    strokeDashoffset={`-${Math.round(((lowPct + medPct) / 100) * 239)}`}
+                    strokeLinecap="round"
+                  />
+                )}
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                <span className="text-2xl font-black text-[#0F2744]">{totalAudits}</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  {totalAudits === 1 ? 'Contrato' : 'Contratos'}
+                </span>
+              </div>
+            </div>
+
+            {/* Legend */}
+            <div className="space-y-2 text-xs">
+              <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-50/70 border border-emerald-100">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                  <span className="font-semibold text-emerald-950">Riesgo Bajo / Controlado</span>
+                </div>
+                <span className="font-bold text-emerald-800">{lowPct}% ({lowCount})</span>
+              </div>
+
+              <div className="flex items-center justify-between p-2 rounded-lg bg-amber-50/70 border border-amber-100">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                  <span className="font-semibold text-amber-950">Riesgo Medio (Enmiendas)</span>
+                </div>
+                <span className="font-bold text-amber-800">{medPct}% ({mediumCount})</span>
+              </div>
+
+              <div className="flex items-center justify-between p-2 rounded-lg bg-rose-50/70 border border-rose-100">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-600" />
+                  <span className="font-semibold text-rose-950">Riesgo Alto / Crítico</span>
+                </div>
+                <span className="font-bold text-rose-700">{highPct}% ({highCount})</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 2: Category Breakdown */}
+        <div className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-xs flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="text-base font-bold text-[#0F2744]">
+                  Auditoría por Categoría
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Cumplimiento por área contractual evaluada.
+                </p>
+              </div>
+              <span className="text-[11px] font-semibold text-[#1E3E62] bg-blue-50 px-2.5 py-1 rounded-full">
+                6 Categorías
+              </span>
+            </div>
+
+            {totalAudits === 0 ? (
+              <div className="py-10 text-center text-slate-400 space-y-2">
+                <Layers className="w-8 h-8 text-slate-300 mx-auto" />
+                <p className="text-xs font-bold text-slate-700">Sin datos de categorías</p>
+                <p className="text-[11px] text-slate-400">
+                  Las métricas se calcularán automáticamente al auditar contratos.
+                </p>
               </div>
             ) : (
-              categoryStats.map((item, idx) => (
-                <div key={idx} className="space-y-1">
-                  <div className="flex items-center justify-between text-xs font-semibold">
-                    <span className="text-slate-700">{item.name}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-slate-400 font-normal">
-                        {item.issues} contingencias en {item.total} cláusulas
-                      </span>
-                      <span
-                        className={`font-bold ${
-                          item.complianceRate >= 80 ? 'text-emerald-600' : 'text-amber-600'
-                        }`}
-                      >
-                        {item.complianceRate}% conforme
-                      </span>
+              <div className="space-y-3.5 mt-2">
+                {categoryStats.map((item, idx) => (
+                  <div key={idx} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs font-semibold">
+                      <span className="text-slate-700 truncate max-w-[140px] sm:max-w-none">{item.name}</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-slate-400 font-normal text-[11px]">
+                          {item.issues} hallazgos
+                        </span>
+                        <span
+                          className={`font-bold text-[11px] ${
+                            item.complianceRate >= 80 ? 'text-emerald-600' : 'text-amber-600'
+                          }`}
+                        >
+                          {item.complianceRate}%
+                        </span>
+                      </div>
+                    </div>
+                    {/* Multi-segment Bar */}
+                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden flex">
+                      <div
+                        className="bg-emerald-500 h-full transition-all duration-500"
+                        style={{ width: `${item.complianceRate}%` }}
+                      />
+                      <div
+                        className="bg-rose-500 h-full transition-all duration-500"
+                        style={{ width: `${100 - item.complianceRate}%` }}
+                      />
                     </div>
                   </div>
-                  {/* Multi-segment Bar */}
-                  <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden flex">
-                    <div
-                      className="bg-emerald-500 h-full transition-all duration-500"
-                      style={{ width: `${item.complianceRate}%` }}
-                    />
-                    <div
-                      className="bg-rose-500 h-full transition-all duration-500"
-                      style={{ width: `${100 - item.complianceRate}%` }}
-                    />
-                  </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
         </div>
 
-        {/* Urgent Deadlines Notification Widget (1 col) */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-xs flex flex-col justify-between">
+        {/* Card 3: Urgent Deadlines Notification Widget */}
+        <div className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-xs flex flex-col justify-between md:col-span-2 lg:col-span-1">
           <div>
             <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
               <div className="flex items-center gap-2">
@@ -352,10 +431,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
             <div className="space-y-3">
               {deadlines.length === 0 ? (
-                <div className="py-8 text-center text-slate-400">
-                  <Clock className="w-8 h-8 mx-auto mb-2 text-slate-300 stroke-[1.5]" />
-                  <p className="text-xs font-semibold text-slate-600">Sin vencimientos pendientes</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Las alertas de prórroga y terminación se listarán aquí automáticamente.</p>
+                <div className="py-10 text-center text-slate-400 space-y-2">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                  <p className="text-xs font-bold text-slate-700">Sin alertas pendientes</p>
+                  <p className="text-[11px] text-slate-400">
+                    Todos los plazos contractuales se encuentran al día.
+                  </p>
                 </div>
               ) : (
                 deadlines.slice(0, 3).map((dl, idx) => (
@@ -435,18 +516,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <tbody className="divide-y divide-slate-100 text-slate-700">
               {filteredAudits.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center">
-                    <div className="flex flex-col items-center justify-center text-slate-400">
-                      <FileText className="w-10 h-10 mb-2 text-slate-300 stroke-[1.5]" />
-                      <p className="text-sm font-semibold text-slate-600">No hay contratos auditados aún</p>
-                      <p className="text-xs text-slate-400 mt-0.5 max-w-sm">
-                        Carga tu primer documento para comenzar a evaluar riesgos, detectar cláusulas críticas y visualizar dictámenes.
+                  <td colSpan={7} className="py-12 px-4 text-center">
+                    <div className="max-w-sm mx-auto flex flex-col items-center">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mb-3 shadow-xs">
+                        <FileText className="w-6 h-6" />
+                      </div>
+                      <p className="text-sm font-bold text-[#0F2744]">Sin contratos auditados</p>
+                      <p className="text-xs text-slate-400 mt-1 mb-4">
+                        Sube un archivo PDF para auditarlo en tiempo real con IA y el motor normativo 2026.
                       </p>
                       <button
                         onClick={() => onNavigateTab('upload')}
-                        className="mt-3.5 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-[#0F2744] hover:bg-[#16385F] transition-all cursor-pointer shadow-xs"
+                        className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#0F2744] hover:bg-[#1E3E62] transition-all shadow-xs cursor-pointer active:scale-95"
                       >
-                        + Iniciar Primera Auditoría
+                        + Cargar Primer Contrato
                       </button>
                     </div>
                   </td>
