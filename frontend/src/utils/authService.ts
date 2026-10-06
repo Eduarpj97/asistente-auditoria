@@ -1,65 +1,6 @@
 import { User } from '../types/audit';
 
-export interface RegisteredAccount {
-  id: string;
-  name: string;
-  email: string;
-  company: string;
-  role: string;
-  passwordHash: string;
-  createdAt: string;
-}
-
-const STORAGE_KEY = 'audiflow_registered_users';
 const SESSION_KEY = 'audiflow_user';
-
-/**
- * Función criptográfica estándar para hashear contraseñas usando SHA-256
- */
-export async function hashPassword(password: string): Promise<string> {
-  try {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-  } catch (err) {
-    // Fallback de codificación segura en entornos restrictivos
-    let hash = 0;
-    for (let i = 0; i < password.length; i++) {
-      const char = password.charCodeAt(i);
-      hash = (hash << 5) - hash + char;
-      hash |= 0;
-    }
-    return `hash_${Math.abs(hash)}_${password.length}`;
-  }
-}
-
-/**
- * Obtener todos los usuarios registrados en el almacenamiento local persistente
- */
-export function getRegisteredAccounts(): RegisteredAccount[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
-}
-
-/**
- * Inicializar la base de datos de usuarios purificando cuentas ficticias o corporativas pre-cargadas
- */
-export async function initializeUserDatabase(): Promise<void> {
-  const existing = getRegisteredAccounts();
-  const cleaned = existing.filter(
-    (acc) => acc.id !== 'usr-admin-corp' && acc.email.toLowerCase() !== 'eduardo.pedroza@audiflow.com'
-  );
-  if (cleaned.length !== existing.length) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(cleaned));
-  }
-}
 
 function getAuthEndpoint(action: 'login' | 'register'): string {
   if (typeof window !== 'undefined' && window.location.origin.includes(':3000')) {
@@ -67,6 +8,7 @@ function getAuthEndpoint(action: 'login' | 'register'): string {
   }
   return `/v1/auth/${action}`;
 }
+
 
 /**
  * Registrar una nueva cuenta en la base de datos centralizada (Soporte multidispositivo)
@@ -80,7 +22,7 @@ export async function registerAccount(params: {
 }): Promise<{ success: boolean; user?: User; error?: string }> {
   const normalizedEmail = params.email.trim().toLowerCase();
 
-  // 1. Intentar registrar en el backend centralizado (para que funcione en todos los dispositivos)
+  // Registrar SIEMPRE en el servidor central (sin fallback local — garantiza acceso multidispositivo)
   try {
     const res = await fetch(getAuthEndpoint('register'), {
       method: 'POST',
@@ -98,47 +40,14 @@ export async function registerAccount(params: {
     if (res.ok && data.success && data.user) {
       return { success: true, user: data.user };
     }
-    if (!res.ok) {
-      return { success: false, error: data.detail || data.error || 'Error al registrar la cuenta en el servidor.' };
-    }
+    return { success: false, error: data.detail || data.error || 'Error al registrar la cuenta en el servidor.' };
   } catch (err) {
-    console.warn('[Audiflow Auth] Backend API no disponible, utilizando almacenamiento local de contingencia.');
-  }
-
-  // 2. Fallback resiliente en LocalStorage
-  const accounts = getRegisteredAccounts();
-  const exists = accounts.some((acc) => acc.email.toLowerCase() === normalizedEmail);
-  if (exists) {
+    console.error('[Audiflow Auth] Servidor no disponible:', err);
     return {
       success: false,
-      error: 'Ya existe una cuenta registrada con este correo electrónico. Inicia sesión o utiliza otro correo.',
+      error: 'Servidor no disponible. Verifica tu conexión a internet e intenta de nuevo.',
     };
   }
-
-  const passwordHash = await hashPassword(params.password);
-  const newAccount: RegisteredAccount = {
-    id: `usr-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-    name: params.name.trim(),
-    email: normalizedEmail,
-    company: params.company.trim(),
-    role: params.role.trim(),
-    passwordHash,
-    createdAt: new Date().toISOString(),
-  };
-
-  accounts.push(newAccount);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts));
-
-  return {
-    success: true,
-    user: {
-      id: newAccount.id,
-      name: newAccount.name,
-      email: newAccount.email,
-      role: newAccount.role,
-      company: newAccount.company,
-    },
-  };
 }
 
 /**
@@ -150,7 +59,7 @@ export async function authenticate(
 ): Promise<{ success: boolean; user?: User; error?: string }> {
   const normalizedEmail = email.trim().toLowerCase();
 
-  // 1. Intentar validar en la base de datos central del servidor
+  // Autenticar SIEMPRE contra el servidor central (sin fallback local — acceso multidispositivo garantizado)
   try {
     const res = await fetch(getAuthEndpoint('login'), {
       method: 'POST',
@@ -162,60 +71,17 @@ export async function authenticate(
     if (res.ok && data.success && data.user) {
       return { success: true, user: data.user };
     }
+    return {
+      success: false,
+      error: data.detail || data.error || 'Credenciales incorrectas. Verifica tu correo y contraseña.',
+    };
   } catch (err) {
-    console.warn('[Audiflow Auth] Backend API no disponible, validando en almacenamiento local.');
+    console.error('[Audiflow Auth] Servidor no disponible:', err);
+    return {
+      success: false,
+      error: 'Servidor no disponible. Verifica tu conexión a internet e intenta de nuevo.',
+    };
   }
-
-  // 2. Si no está en el servidor, comprobar si existe en el almacenamiento local de este dispositivo
-  const accounts = getRegisteredAccounts();
-  const account = accounts.find((acc) => acc.email.toLowerCase() === normalizedEmail);
-
-  if (account) {
-    const inputHash = await hashPassword(password);
-    if (account.passwordHash === inputHash) {
-      // ¡Cuenta local encontrada! Subirla automáticamente al servidor central para habilitar acceso multidispositivo
-      try {
-        const syncRes = await fetch(getAuthEndpoint('register'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: account.name,
-            email: account.email,
-            password: password,
-            company: account.company || 'Firma de Auditoría',
-            role: account.role || 'Auditor Legal Senior',
-          }),
-        });
-        const syncData = await syncRes.json();
-        if (syncRes.ok && syncData.user) {
-          return { success: true, user: syncData.user };
-        }
-      } catch (syncErr) {
-        console.warn('[Audiflow Auth] Error al auto-sincronizar cuenta local con el servidor:', syncErr);
-      }
-
-      return {
-        success: true,
-        user: {
-          id: account.id,
-          name: account.name,
-          email: account.email,
-          role: account.role,
-          company: account.company,
-        },
-      };
-    } else {
-      return {
-        success: false,
-        error: 'Contraseña incorrecta. Por favor verifica tus credenciales.',
-      };
-    }
-  }
-
-  return {
-    success: false,
-    error: 'No se encontró ninguna cuenta registrada con este correo electrónico. Por favor regístrate.',
-  };
 }
 
 /**

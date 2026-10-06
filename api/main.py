@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 # Cargar variables de entorno
 load_dotenv()
 
-from database import check_db_health, db_register_user, db_authenticate_user
+from database import check_db_health, db_register_user, db_authenticate_user, db_save_audit_sync, db_get_user_audits, db_delete_audit_sync
 from services.ocr_service import extract_text_hybrid
 from services.chunk_service import create_chunks
 from services.risk_scoring_service import risk_engine
@@ -97,6 +97,46 @@ async def login_endpoint(req: LoginRequest):
     if not res.get("success"):
         raise HTTPException(status_code=401, detail=res.get("error", "Credenciales incorrectas."))
     return res
+
+# ─── Sincronización cross-device de auditorías ───────────────────────────────
+
+@app.post("/v1/audits/sync", summary="Guardar auditoría para sincronización cross-device")
+async def sync_audit(payload: dict):
+    """
+    Guarda el JSON completo de una auditoría vinculada al email del usuario.
+    Permite recuperar el historial de auditorías desde cualquier dispositivo.
+    """
+    user_email = payload.get("user_email", "").strip().lower()
+    audit_id = payload.get("audit_id", "")
+    audit_json_str = ""
+    
+    import json
+    audit_data = payload.get("audit_data")
+    if not user_email or not audit_id or not audit_data:
+        raise HTTPException(status_code=400, detail="Faltan campos requeridos: user_email, audit_id, audit_data.")
+    
+    audit_json_str = json.dumps(audit_data, ensure_ascii=False)
+    result = db_save_audit_sync(user_email, audit_id, audit_json_str)
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("error", "Error al guardar auditoría."))
+    return {"success": True, "audit_id": audit_id}
+
+@app.get("/v1/audits/user", summary="Obtener auditorías sincronizadas de un usuario")
+async def get_user_audits(email: str):
+    """
+    Recupera todas las auditorías almacenadas para un usuario por su email.
+    Se invoca al iniciar sesión para cargar el historial en cualquier dispositivo.
+    """
+    audits = db_get_user_audits(email)
+    return {"success": True, "audits": audits, "total": len(audits)}
+
+@app.delete("/v1/audits/sync/{audit_id}", summary="Eliminar auditoría sincronizada")
+async def delete_synced_audit(audit_id: str, email: str):
+    """Elimina una auditoría sincronizada de un usuario."""
+    result = db_delete_audit_sync(email, audit_id)
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("error", "Error al eliminar auditoría."))
+    return {"success": True}
 
 @app.post("/v1/process-pdf", response_model=ProcessingResponse, summary="Procesar PDF y evaluar riesgos normativos")
 async def process_pdf(

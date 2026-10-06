@@ -91,6 +91,15 @@ def init_sqlite_db():
             creado_en DATETIME DEFAULT CURRENT_TIMESTAMP
         )
         """)
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS auditorias_sync (
+            id_audit TEXT NOT NULL,
+            user_email TEXT NOT NULL,
+            audit_json TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id_audit, user_email)
+        )
+        """)
         conn.commit()
         conn.close()
     except Exception as e:
@@ -182,6 +191,62 @@ def seed_default_admin():
         pass
 
 seed_default_admin()
+
+
+def db_save_audit_sync(user_email: str, audit_id: str, audit_json: str) -> Dict[str, Any]:
+    """Guarda el JSON completo de una auditoría vinculada al email del usuario para sincronización cross-device."""
+    norm_email = user_email.strip().lower()
+    try:
+        conn = sqlite3.connect(SQLITE_DB_PATH)
+        c = conn.cursor()
+        c.execute("""
+        INSERT OR REPLACE INTO auditorias_sync (id_audit, user_email, audit_json)
+        VALUES (?, ?, ?)
+        """, (audit_id, norm_email, audit_json))
+        conn.commit()
+        conn.close()
+        return {"success": True}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def db_get_user_audits(user_email: str) -> list:
+    """Recupera todas las auditorías sincronizadas de un usuario por email."""
+    import json
+    norm_email = user_email.strip().lower()
+    try:
+        conn = sqlite3.connect(SQLITE_DB_PATH)
+        c = conn.cursor()
+        rows = c.execute(
+            "SELECT audit_json FROM auditorias_sync WHERE user_email = ? ORDER BY created_at DESC",
+            (norm_email,)
+        ).fetchall()
+        conn.close()
+        result = []
+        for row in rows:
+            try:
+                result.append(json.loads(row[0]))
+            except Exception:
+                pass
+        return result
+    except Exception as e:
+        print(f"[ERROR] Error recuperando auditorías del usuario: {e}")
+        return []
+
+
+def db_delete_audit_sync(user_email: str, audit_id: str) -> Dict[str, Any]:
+    """Elimina una auditoría sincronizada de un usuario."""
+    norm_email = user_email.strip().lower()
+    try:
+        conn = sqlite3.connect(SQLITE_DB_PATH)
+        c = conn.cursor()
+        c.execute("DELETE FROM auditorias_sync WHERE id_audit = ? AND user_email = ?", (audit_id, norm_email))
+        conn.commit()
+        conn.close()
+        return {"success": True}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
 
 supabase: Client = None
 

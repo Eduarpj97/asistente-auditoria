@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { AuthScreen } from './components/AuthScreen';
 import { Navbar, NavTab } from './components/Navbar';
 import { Dashboard } from './components/Dashboard';
@@ -9,6 +9,13 @@ import { DeadlineAlerts } from './components/DeadlineAlerts';
 import { ContractAudit, User, KeyDeadline } from './types/audit';
 import { exportToPDF, exportToWord } from './utils/reportExporter';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
+
+function getApiBase(): string {
+  if (typeof window !== 'undefined' && window.location.origin.includes(':3000')) {
+    return 'http://127.0.0.1:8000';
+  }
+  return '';
+}
 
 export default function App() {
   // Authentication state (purga automática de cuentas corporativas pre-cargadas)
@@ -127,11 +134,75 @@ export default function App() {
   }, [currentUser]);
 
   // Auth Handlers
-  const handleLogin = (user: User) => {
+  const handleLogin = async (user: User) => {
     setCurrentUser(user);
     setCurrentTab('dashboard');
     setInactivityNotice(null);
     showToast(`¡Bienvenido a Audiflow, ${user.name}!`);
+
+    // Sincronizar auditorías desde el servidor (cross-device)
+    try {
+      const res = await fetch(`${getApiBase()}/v1/audits/user?email=${encodeURIComponent(user.email)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.audits) && data.audits.length > 0) {
+          setAudits((localAudits) => {
+            const localIds = new Set(localAudits.map((a) => a.id));
+            const serverOnly = data.audits.filter((a: ContractAudit) => !localIds.has(a.id));
+            const merged = [...localAudits, ...serverOnly];
+            // Ordenar por fecha más reciente
+            merged.sort((a, b) => new Date(b.auditDate).getTime() - new Date(a.auditDate).getTime());
+            return merged;
+          });
+
+          // Merge deadlines from server audits
+          setDeadlines((localDeadlines) => {
+            const existingIds = new Set(localDeadlines.map((d) => d.id));
+            const newDeadlines: KeyDeadline[] = [];
+            data.audits.forEach((audit: ContractAudit) => {
+              if (audit.keyDeadlines) {
+                audit.keyDeadlines.forEach((dl) => {
+                  if (dl.id && !existingIds.has(dl.id)) {
+                    newDeadlines.push({ ...dl, contractId: audit.id, contractTitle: audit.contractTitle });
+                  }
+                });
+              }
+            });
+            return [...localDeadlines, ...newDeadlines];
+          });
+
+          // Subir auditorías locales que no estaban en el servidor
+          const serverIds = new Set(data.audits.map((a: ContractAudit) => a.id));
+          const localOnlyAudits = audits.filter((a) => !serverIds.has(a.id));
+          for (const audit of localOnlyAudits) {
+            try {
+              await fetch(`${getApiBase()}/v1/audits/sync`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_email: user.email, audit_id: audit.id, audit_data: audit }),
+              });
+            } catch {
+              // Silenciar errores de sync
+            }
+          }
+        } else {
+          // No hay auditorías en el servidor — subir las locales
+          for (const audit of audits) {
+            try {
+              await fetch(`${getApiBase()}/v1/audits/sync`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_email: user.email, audit_id: audit.id, audit_data: audit }),
+              });
+            } catch {
+              // Silenciar errores de sync
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[Audiflow Sync] No se pudieron sincronizar auditorías desde el servidor:', err);
+    }
   };
 
   const handleLogout = () => {
@@ -161,6 +232,19 @@ export default function App() {
     setSelectedAudit(newAudit);
     setCurrentTab('detail');
     showToast('¡Auditoría de contrato completada con éxito!');
+
+    // Sincronizar al servidor en background (fire-and-forget)
+    if (currentUser?.email) {
+      fetch(`${getApiBase()}/v1/audits/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_email: currentUser.email,
+          audit_id: newAudit.id,
+          audit_data: newAudit,
+        }),
+      }).catch((err) => console.warn('[Audiflow Sync] Error al sincronizar auditoría:', err));
+    }
   };
 
   // Action handlers
@@ -178,6 +262,13 @@ export default function App() {
       setCurrentTab('history');
     }
     showToast('Documento eliminado del historial.');
+
+    // Sincronizar eliminación en el servidor
+    if (currentUser?.email) {
+      fetch(`${getApiBase()}/v1/audits/sync/${auditId}?email=${encodeURIComponent(currentUser.email)}`, {
+        method: 'DELETE',
+      }).catch((err) => console.warn('[Audiflow Sync] Error al eliminar auditoría del servidor:', err));
+    }
   };
 
   const handleExportPDF = (audit: ContractAudit) => {

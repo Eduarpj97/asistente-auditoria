@@ -22,7 +22,6 @@ import {
   authenticate,
   registerAccount,
   saveActiveSession,
-  initializeUserDatabase,
 } from '../utils/authService';
 
 interface AuthScreenProps {
@@ -48,10 +47,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess, inactivi
   const [successMessage, setSuccessMessage] = useState('');
   const [activeSlide, setActiveSlide] = useState(0);
 
-  // Inicializar base de datos de usuarios al cargar la vista
-  useEffect(() => {
-    initializeUserDatabase();
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
