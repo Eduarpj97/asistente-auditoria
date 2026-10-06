@@ -1,26 +1,24 @@
 import React, { useState, useMemo } from 'react';
 import {
-  TrendingUp,
-  ShieldAlert,
-  CheckCircle2,
   FileText,
-  Clock,
-  Calendar,
-  Filter,
-  ArrowUpRight,
-  ArrowDownRight,
-  ExternalLink,
-  Download,
+  ShieldCheck,
   AlertTriangle,
-  Layers,
-  Sparkles,
+  Bell,
   ChevronRight,
+  Download,
+  FileCheck2,
+  ExternalLink,
+  ShieldAlert,
+  Lock,
+  Scale,
+  Calendar,
 } from 'lucide-react';
-import { ContractAudit, DateFilterRange, KeyDeadline } from '../types/audit';
+import { ContractAudit, KeyDeadline, User } from '../types/audit';
 
 interface DashboardProps {
   audits: ContractAudit[];
   deadlines: KeyDeadline[];
+  user?: User | null;
   onSelectAudit: (audit: ContractAudit) => void;
   onNavigateTab: (tab: 'upload' | 'history' | 'alerts') => void;
   onExportPDF: (audit: ContractAudit) => void;
@@ -30,597 +28,666 @@ interface DashboardProps {
 export const Dashboard: React.FC<DashboardProps> = ({
   audits,
   deadlines,
+  user,
   onSelectAudit,
   onNavigateTab,
   onExportPDF,
-  onExportWord,
 }) => {
-  const [dateRange, setDateRange] = useState<DateFilterRange>('thisMonth');
+  // Filtro temporal reactivo: hoy | semana | mes | todos
+  const [timeFilter, setTimeFilter] = useState<'today' | 'week' | 'month' | 'all'>('all');
 
-  // Filter audits based on selected date range
+  // Filtrado reactivo de auditorías según período seleccionado
   const filteredAudits = useMemo(() => {
-    // For rich demo visualization, we display the calculated dataset
-    return audits;
-  }, [audits, dateRange]);
+    if (timeFilter === 'all') return audits;
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
-  // Aggregate Metrics
+    return audits.filter((audit) => {
+      const dateStr = audit.auditDate || audit.effectiveDate;
+      if (!dateStr) return false;
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return true;
+
+      const itemMs = d.getTime();
+      const diffDays = (now.getTime() - itemMs) / (1000 * 60 * 60 * 24);
+
+      if (timeFilter === 'today') {
+        return itemMs >= todayStart || diffDays <= 1;
+      }
+      if (timeFilter === 'week') {
+        return diffDays <= 7;
+      }
+      if (timeFilter === 'month') {
+        return diffDays <= 30;
+      }
+      return true;
+    });
+  }, [audits, timeFilter]);
+
+  // Aggregate Metrics (100% reales calculados sobre el conjunto filtrado)
   const totalAudits = filteredAudits.length;
+  const approvedCount = filteredAudits.filter((a) => a.status === 'aprobado').length;
+  const inReviewCount = totalAudits - approvedCount;
+
   const avgCompliance = Math.round(
-    filteredAudits.reduce((acc, a) => acc + a.complianceScore, 0) / (totalAudits || 1)
+    filteredAudits.reduce((acc, a) => acc + (a.complianceScore || 0), 0) / (totalAudits || 1)
   );
-  const totalFindings = filteredAudits.reduce((acc, a) => acc + a.clauses.filter(c => !c.compliant).length, 0);
-  const totalCriticalRisks = filteredAudits.reduce(
-    (acc, a) => acc + (a.risksIdentified || []).filter(r => r.severity === 'critical' || r.severity === 'high').length,
+
+  const totalFindings = filteredAudits.reduce(
+    (acc, a) => acc + a.clauses.filter((c) => !c.compliant).length,
     0
   );
 
-  // Dynamic Risk Distribution Counts & Percentages (100% Real)
-  const lowCount = filteredAudits.filter(a => a.overallRiskScore <= 35).length;
-  const mediumCount = filteredAudits.filter(a => a.overallRiskScore > 35 && a.overallRiskScore <= 60).length;
-  const highCount = filteredAudits.filter(a => a.overallRiskScore > 60).length;
+  const totalCriticalRisks = filteredAudits.reduce(
+    (acc, a) =>
+      acc +
+      (a.risksIdentified || []).filter(
+        (r) => r.severity === 'critical' || r.severity === 'high'
+      ).length,
+    0
+  );
+
+  // Dynamic Risk Distribution
+  const lowCount = filteredAudits.filter((a) => a.overallRiskScore <= 35).length;
+  const mediumCount = filteredAudits.filter((a) => a.overallRiskScore > 35 && a.overallRiskScore <= 60).length;
+  const highCount = filteredAudits.filter((a) => a.overallRiskScore > 60).length;
+
   const lowPct = totalAudits > 0 ? Math.round((lowCount / totalAudits) * 100) : 0;
   const medPct = totalAudits > 0 ? Math.round((mediumCount / totalAudits) * 100) : 0;
   const highPct = totalAudits > 0 ? Math.round((highCount / totalAudits) * 100) : 0;
 
-  // Category breakdown for horizontal bar chart
-  const categoryStats = useMemo(() => {
-    const counts: Record<string, { total: number; issues: number }> = {
-      'Penalizaciones': { total: 0, issues: 0 },
-      'Propiedad Intelectual': { total: 0, issues: 0 },
-      'Confidencialidad': { total: 0, issues: 0 },
-      'Terminación & Salida': { total: 0, issues: 0 },
-      'Responsabilidad & Daños': { total: 0, issues: 0 },
-      'Pagos & Tarifas': { total: 0, issues: 0 },
-    };
+  // Active deadlines summary
+  const activeDeadlines = useMemo(() => {
+    return deadlines.filter((d) => !d.dismissed).slice(0, 4);
+  }, [deadlines]);
+
+  const urgentCount = deadlines.filter((d) => d.urgency === 'urgent' && !d.dismissed).length;
+
+  // 5 Ejes Clave del Compendio Normativo 2026
+  const regulatoryAxes = useMemo(() => {
+    const axes = [
+      {
+        id: 'proteccion_datos',
+        name: 'Protección de Datos & IA',
+        ruleRef: 'RGPD / Ley de Datos 2026',
+        icon: Lock,
+        total: 0,
+        issues: 0,
+      },
+      {
+        id: 'aml_cft',
+        name: 'Prevención AML / SARLAFT',
+        ruleRef: 'Debida Diligencia & Listas OFAC',
+        icon: ShieldAlert,
+        total: 0,
+        issues: 0,
+      },
+      {
+        id: 'anticorrupcion_etica',
+        name: 'Anticorrupción & Soborno',
+        ruleRef: 'ISO 37001 / FCPA',
+        icon: Scale,
+        total: 0,
+        issues: 0,
+      },
+      {
+        id: 'seguridad_informacion',
+        name: 'Seguridad de la Información',
+        ruleRef: 'ISO 27001:2022 / Ciberseguridad',
+        icon: ShieldCheck,
+        total: 0,
+        issues: 0,
+      },
+      {
+        id: 'responsabilidad',
+        name: 'Equilibrio & Responsabilidad',
+        ruleRef: 'SLAs, Dolo y Culpa Grave',
+        icon: FileCheck2,
+        total: 0,
+        issues: 0,
+      },
+    ];
 
     filteredAudits.forEach((audit) => {
       audit.clauses.forEach((clause) => {
-        let catName = 'Otros';
-        if (clause.category === 'penalizaciones') catName = 'Penalizaciones';
-        else if (clause.category === 'propiedad_intelectual') catName = 'Propiedad Intelectual';
-        else if (clause.category === 'confidencialidad') catName = 'Confidencialidad';
-        else if (clause.category === 'terminacion') catName = 'Terminación & Salida';
-        else if (clause.category === 'responsabilidad') catName = 'Responsabilidad & Daños';
-        else if (clause.category === 'pagos') catName = 'Pagos & Tarifas';
-
-        if (counts[catName]) {
-          counts[catName].total += 1;
+        const cat = clause.category || '';
+        const axis = axes.find(
+          (a) =>
+            cat.includes(a.id) ||
+            (a.id === 'responsabilidad' && (cat.includes('responsabilidad') || cat.includes('penalidades')))
+        );
+        if (axis) {
+          axis.total += 1;
           if (!clause.compliant || clause.riskLevel === 'high' || clause.riskLevel === 'critical') {
-            counts[catName].issues += 1;
+            axis.issues += 1;
           }
         }
       });
     });
 
-    return Object.entries(counts).map(([name, data]) => ({
-      name,
-      total: data.total,
-      issues: data.issues,
-      complianceRate: data.total > 0 ? Math.round(((data.total - data.issues) / data.total) * 100) : 0,
-    }));
-  }, [filteredAudits]);
+    return axes.map((axis) => {
+      const rate =
+        axis.total > 0
+          ? Math.max(0, Math.round(((axis.total - axis.issues) / axis.total) * 100))
+          : totalAudits > 0
+          ? 100
+          : 0;
+      return { ...axis, complianceRate: rate };
+    });
+  }, [filteredAudits, totalAudits]);
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-200">
-      {/* Top Header & Date Filter Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200">
+      {/* ── 1. Apple Header & Segmented Time Filter ──── */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-black/[0.04] dark:border-white/[0.06]">
         <div>
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
-            <span>AUDIFLOW PLATAFORMA DE AUDITORÍA</span>
-            <span>•</span>
-            <span className="text-[#1E3E62] flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-blue-600" />
-              Supervisión de Cláusulas en Tiempo Real
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl sm:text-3xl font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] tracking-tight">
+              Panel de Control
+            </h1>
+            <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-black/[0.04] dark:bg-white/[0.08] text-[#86868b] dark:text-[#98989d]">
+              <span className="w-2 h-2 rounded-full bg-[#34c759]" />
+              <span>Normativa 2026</span>
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0F2744] tracking-tight mt-1">
-            Panel de Control y Rendimiento
-          </h1>
-          <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
-            Métricas de control contractual, cumplimiento normativo y detección proactiva de riesgos.
+          <p className="text-xs sm:text-sm text-[#86868b] mt-1">
+            {user?.name ? `Auditor: ${user.name} • ` : ''}Monitoreo de riesgos contractuales, debida diligencia y cumplimiento legal.
           </p>
         </div>
 
-        {/* Date Filter & Actions */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center bg-white border border-slate-200 rounded-xl p-1 shadow-2xs">
-            <Filter className="w-3.5 h-3.5 text-slate-400 ml-2 mr-1" />
-            <select
-              value={dateRange}
-              onChange={(e) => setDateRange(e.target.value as DateFilterRange)}
-              className="text-xs font-semibold text-slate-700 bg-transparent py-1.5 pr-2 pl-1 border-none focus:outline-none cursor-pointer"
-            >
-              <option value="today">Hoy (24 horas)</option>
-              <option value="last7days">Últimos 7 días</option>
-              <option value="thisMonth">Este mes (Septiembre 2026)</option>
-              <option value="lastQuarter">Tercer Trimestre (Q3)</option>
-              <option value="thisYear">Año en curso 2026</option>
-              <option value="all">Todo el Histórico</option>
-            </select>
-          </div>
-
-          <button
-            onClick={() => onNavigateTab('upload')}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-[#0F2744] hover:bg-[#16385F] transition-all shadow-xs cursor-pointer"
-          >
-            <span>+ Cargar PDF</span>
-          </button>
+        {/* Filtro Temporal: Hoy / Semana / Mes / Todos (Segmented Control iOS) */}
+        <div className="flex items-center bg-black/[0.04] dark:bg-white/[0.08] p-1 rounded-full self-start sm:self-auto">
+          {[
+            { id: 'today', label: 'Hoy' },
+            { id: 'week', label: 'Semana' },
+            { id: 'month', label: 'Mes' },
+            { id: 'all', label: 'Todos' },
+          ].map((item) => {
+            const isActive = timeFilter === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setTimeFilter(item.id as any)}
+                className={`px-3.5 py-1 text-xs font-medium rounded-full transition-all duration-200 cursor-pointer ${
+                  isActive
+                    ? 'bg-white dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-[#f5f5f7] shadow-xs'
+                    : 'text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]'
+                }`}
+              >
+                {item.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* 4 Primary KPI Cards (Faithful to WhatsApp Image 1) */}
-      {/* 4 Primary KPI Cards (Real Data derived from Audits) */}
+      {/* ── 2. KPI Cards Grid: Apple Smooth Cards ─────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-        {/* KPI 1: Auditorías activas */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs hover:shadow-md transition-shadow relative overflow-hidden group">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-semibold text-slate-500">Auditorías Activas</span>
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+        {/* Card 1: Expedientes Auditados */}
+        <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl p-5 border border-black/[0.04] dark:border-white/[0.06] shadow-xs hover:shadow-md transition-all group">
+          <div className="flex items-center justify-between text-[#86868b]">
+            <span className="text-xs font-medium uppercase tracking-wider">Expedientes</span>
+            <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] flex items-center justify-center">
               <FileText className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline justify-between mt-3">
-            <span className="text-3xl font-extrabold text-[#0F2744]">{totalAudits}</span>
-            <div className="flex items-center text-xs font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
-              <span>{totalAudits === 1 ? '1 contrato' : `${totalAudits} contratos`}</span>
-            </div>
+            <span className="text-3xl sm:text-4xl font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] tracking-tight">
+              {totalAudits}
+            </span>
+            <span className="text-xs font-medium text-[#86868b] bg-black/[0.04] dark:bg-white/[0.06] px-2.5 py-0.5 rounded-full">
+              {totalAudits === 1 ? '1 contrato' : `${totalAudits} contratos`}
+            </span>
           </div>
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-            <span>Registros en sistema</span>
-            <span className="font-semibold text-slate-600">{totalAudits > 0 ? 'Actualizado' : 'Sin datos'}</span>
+          <div className="mt-4 pt-3 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between text-xs text-[#86868b]">
+            <span>Estado:</span>
+            <span className="font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">
+              {totalAudits > 0 ? `${approvedCount} Aprobados • ${inReviewCount} En revisión` : 'Sin registros'}
+            </span>
           </div>
         </div>
 
-        {/* KPI 2: Cumplimiento */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs hover:shadow-md transition-shadow relative overflow-hidden group">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-semibold text-slate-500">Cumplimiento Global</span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <CheckCircle2 className="w-4 h-4" />
+        {/* Card 2: Índice de Cumplimiento Global */}
+        <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl p-5 border border-black/[0.04] dark:border-white/[0.06] shadow-xs hover:shadow-md transition-all group">
+          <div className="flex items-center justify-between text-[#86868b]">
+            <span className="text-xs font-medium uppercase tracking-wider">Cumplimiento</span>
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-[#34c759] flex items-center justify-center">
+              <ShieldCheck className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline justify-between mt-3">
-            <span className="text-3xl font-extrabold text-[#0F2744]">
+            <span className="text-3xl sm:text-4xl font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] tracking-tight">
               {totalAudits > 0 ? `${avgCompliance}%` : '—'}
             </span>
-            <div className="relative w-8 h-8 flex items-center justify-center">
-              <svg className="w-8 h-8 transform -rotate-90" viewBox="0 0 36 36">
-                <circle cx="18" cy="18" r="14" fill="none" stroke="#E2E8F0" strokeWidth="4" />
-                <circle
-                  cx="18"
-                  cy="18"
-                  r="14"
-                  fill="none"
-                  stroke={avgCompliance >= 80 ? '#10B981' : avgCompliance >= 60 ? '#F59E0B' : '#E11D48'}
-                  strokeWidth="4"
-                  strokeDasharray={`${totalAudits > 0 ? avgCompliance : 0} 100`}
-                  strokeLinecap="round"
-                />
-              </svg>
+            <span
+              className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${
+                totalAudits === 0
+                  ? 'bg-black/[0.04] dark:bg-white/[0.06] text-[#86868b]'
+                  : avgCompliance >= 80
+                  ? 'bg-emerald-50 dark:bg-emerald-950/50 text-[#34c759]'
+                  : avgCompliance >= 50
+                  ? 'bg-amber-50 dark:bg-amber-950/50 text-[#ff9500]'
+                  : 'bg-red-50 dark:bg-red-950/50 text-[#ff3b30]'
+              }`}
+            >
+              {totalAudits === 0 ? 'N/A' : avgCompliance >= 80 ? 'Óptimo' : avgCompliance >= 50 ? 'Regular' : 'Crítico'}
+            </span>
+          </div>
+          <div className="mt-4 pt-3 border-t border-black/[0.04] dark:border-white/[0.06]">
+            <div className="w-full h-1.5 bg-black/[0.04] dark:bg-white/[0.08] rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  avgCompliance >= 80 ? 'bg-[#34c759]' : avgCompliance >= 50 ? 'bg-[#ff9500]' : 'bg-[#ff3b30]'
+                }`}
+                style={{ width: `${totalAudits > 0 ? avgCompliance : 0}%` }}
+              />
             </div>
           </div>
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-            <span>Rango regulatorio</span>
-            <span className={`font-bold ${avgCompliance >= 80 ? 'text-emerald-600' : avgCompliance >= 60 ? 'text-amber-600' : 'text-slate-400'}`}>
-              {totalAudits > 0 ? (avgCompliance >= 80 ? 'Conforme (A)' : 'Observado') : 'Pendiente'}
+        </div>
+
+        {/* Card 3: Hallazgos & Puntos de Infracción */}
+        <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl p-5 border border-black/[0.04] dark:border-white/[0.06] shadow-xs hover:shadow-md transition-all group">
+          <div className="flex items-center justify-between text-[#86868b]">
+            <span className="text-xs font-medium uppercase tracking-wider">Hallazgos</span>
+            <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-[#ff9500] flex items-center justify-center">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="flex items-baseline justify-between mt-3">
+            <span className="text-3xl sm:text-4xl font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] tracking-tight">
+              {totalFindings}
+            </span>
+            <span className="text-xs font-medium text-[#ff9500] bg-amber-50 dark:bg-amber-950/50 px-2.5 py-0.5 rounded-full">
+              Observados
+            </span>
+          </div>
+          <div className="mt-4 pt-3 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between text-xs text-[#86868b]">
+            <span>Severidad alta:</span>
+            <span className={`font-medium ${totalCriticalRisks > 0 ? 'text-[#ff3b30]' : 'text-[#1d1d1f] dark:text-[#f5f5f7]'}`}>
+              {totalCriticalRisks} Críticos
             </span>
           </div>
         </div>
 
-        {/* KPI 3: Hallazgos */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs hover:shadow-md transition-shadow relative overflow-hidden group">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-semibold text-slate-500">Hallazgos Jurídicos</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-              <Layers className="w-4 h-4" />
+        {/* Card 4: Plazos de Expiración & Rescisión */}
+        <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl p-5 border border-black/[0.04] dark:border-white/[0.06] shadow-xs hover:shadow-md transition-all group">
+          <div className="flex items-center justify-between text-[#86868b]">
+            <span className="text-xs font-medium uppercase tracking-wider">Vencimientos</span>
+            <div className="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-950/40 text-[#ff3b30] flex items-center justify-center">
+              <Bell className="w-4 h-4" />
             </div>
           </div>
           <div className="flex items-baseline justify-between mt-3">
-            <span className="text-3xl font-extrabold text-[#0F2744]">{totalFindings}</span>
-            <div className="flex items-center text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
-              <span>Observaciones</span>
-            </div>
+            <span className="text-3xl sm:text-4xl font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] tracking-tight">
+              {deadlines.length}
+            </span>
+            <span
+              className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${
+                urgentCount > 0
+                  ? 'bg-red-50 dark:bg-red-950/50 text-[#ff3b30]'
+                  : 'bg-black/[0.04] dark:bg-white/[0.06] text-[#86868b]'
+              }`}
+            >
+              {urgentCount > 0 ? `${urgentCount} Urgentes` : 'Al día'}
+            </span>
           </div>
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-            <span>Cláusulas observadas</span>
-            <span className="font-semibold text-amber-600">{totalFindings} pendientes</span>
-          </div>
-        </div>
-
-        {/* KPI 4: Riesgos Críticos */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs hover:shadow-md transition-shadow relative overflow-hidden group">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-semibold text-slate-500">Riesgos Críticos</span>
-            <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
-              <ShieldAlert className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="flex items-baseline justify-between mt-3">
-            <span className="text-3xl font-extrabold text-rose-600">{totalCriticalRisks}</span>
-            <div className={`flex items-center text-xs font-bold px-2 py-0.5 rounded-full ${totalCriticalRisks > 0 ? 'text-rose-600 bg-rose-50' : 'text-slate-500 bg-slate-100'}`}>
-              <AlertTriangle className="w-3.5 h-3.5 mr-0.5" />
-              <span>{totalCriticalRisks > 0 ? 'Prioridad Alta' : 'Sin contingencias'}</span>
-            </div>
-          </div>
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-            <span>Contingencias críticas</span>
+          <div className="mt-4 pt-3 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between text-xs">
+            <span className="text-[#86868b]">Agenda:</span>
             <button
               onClick={() => onNavigateTab('alerts')}
-              className="text-rose-600 font-bold hover:underline cursor-pointer"
+              className="text-[#0071e3] font-medium hover:underline cursor-pointer flex items-center gap-0.5"
             >
-              Revisar alertas →
+              <span>Ver todos</span>
+              <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Analytics & Risk Breakdown Row (Balanced 3-Column Grid) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Card 1: Distribución de Riesgos (Donut) */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-xs flex flex-col justify-between">
+      {/* ── 3. Middle Section: Matrix & Horizon (2 Columns) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Columna Izquierda (7 de 12): Matriz de Riesgos & 5 Ejes Normativos */}
+        <div className="lg:col-span-7 bg-white dark:bg-[#1c1c1e] rounded-3xl p-6 border border-black/[0.04] dark:border-white/[0.06] shadow-xs flex flex-col justify-between">
           <div>
-            <h3 className="text-base font-bold text-[#0F2744]">
-              Distribución de Riesgos Contractuales
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Clasificación de contingencias detectadas en auditorías activas.
-            </p>
-
-            {/* Donut Graphic */}
-            <div className="relative w-44 h-44 mx-auto my-6 flex items-center justify-center">
-              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                {/* Underlay */}
-                <circle cx="50" cy="50" r="38" fill="none" stroke="#F1F5F9" strokeWidth="12" />
-                {totalAudits > 0 && lowPct > 0 && (
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="38"
-                    fill="none"
-                    stroke="#10B981"
-                    strokeWidth="12"
-                    strokeDasharray={`${Math.round((lowPct / 100) * 239)} 239`}
-                    strokeDashoffset="0"
-                    strokeLinecap="round"
-                  />
-                )}
-                {totalAudits > 0 && medPct > 0 && (
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="38"
-                    fill="none"
-                    stroke="#F59E0B"
-                    strokeWidth="12"
-                    strokeDasharray={`${Math.round((medPct / 100) * 239)} 239`}
-                    strokeDashoffset={`-${Math.round((lowPct / 100) * 239)}`}
-                    strokeLinecap="round"
-                  />
-                )}
-                {totalAudits > 0 && highPct > 0 && (
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="38"
-                    fill="none"
-                    stroke="#E11D48"
-                    strokeWidth="12"
-                    strokeDasharray={`${Math.round((highPct / 100) * 239)} 239`}
-                    strokeDashoffset={`-${Math.round(((lowPct + medPct) / 100) * 239)}`}
-                    strokeLinecap="round"
-                  />
-                )}
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                <span className="text-2xl font-black text-[#0F2744]">{totalAudits}</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  {totalAudits === 1 ? 'Contrato' : 'Contratos'}
-                </span>
-              </div>
-            </div>
-
-            {/* Legend */}
-            <div className="space-y-2 text-xs">
-              <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-50/70 border border-emerald-100">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                  <span className="font-semibold text-emerald-950">Riesgo Bajo / Controlado</span>
-                </div>
-                <span className="font-bold text-emerald-800">{lowPct}% ({lowCount})</span>
-              </div>
-
-              <div className="flex items-center justify-between p-2 rounded-lg bg-amber-50/70 border border-amber-100">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                  <span className="font-semibold text-amber-950">Riesgo Medio (Enmiendas)</span>
-                </div>
-                <span className="font-bold text-amber-800">{medPct}% ({mediumCount})</span>
-              </div>
-
-              <div className="flex items-center justify-between p-2 rounded-lg bg-rose-50/70 border border-rose-100">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-rose-600" />
-                  <span className="font-semibold text-rose-950">Riesgo Alto / Crítico</span>
-                </div>
-                <span className="font-bold text-rose-700">{highPct}% ({highCount})</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 2: Category Breakdown */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-3">
+            <div className="flex items-center justify-between pb-3 border-b border-black/[0.04] dark:border-white/[0.06]">
               <div>
-                <h3 className="text-base font-bold text-[#0F2744]">
-                  Auditoría por Categoría
-                </h3>
-                <p className="text-xs text-slate-400">
-                  Cumplimiento por área contractual evaluada.
+                <h2 className="text-base font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] tracking-tight">
+                  Matriz de Riesgos & Ejes Normativos (2026)
+                </h2>
+                <p className="text-xs text-[#86868b] mt-0.5">
+                  Evaluación forense de debida diligencia legal
                 </p>
               </div>
-              <span className="text-[11px] font-semibold text-[#1E3E62] bg-blue-50 px-2.5 py-1 rounded-full">
-                6 Categorías
+              <span className="hidden sm:inline-flex text-xs font-medium text-[#0071e3] bg-blue-50 dark:bg-blue-950/40 px-3 py-1 rounded-full">
+                5 Ejes de Control
               </span>
             </div>
 
-            {totalAudits === 0 ? (
-              <div className="py-10 text-center text-slate-400 space-y-2">
-                <Layers className="w-8 h-8 text-slate-300 mx-auto" />
-                <p className="text-xs font-bold text-slate-700">Sin datos de categorías</p>
-                <p className="text-[11px] text-slate-400">
-                  Las métricas se calcularán automáticamente al auditar contratos.
-                </p>
+            {/* Segmented Risk Health Overview */}
+            <div className="my-5 p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06]">
+              <div className="flex items-center justify-between text-xs mb-2">
+                <span className="font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">
+                  Distribución de Riesgo
+                </span>
+                <span className="text-[#86868b]">
+                  {totalAudits} {totalAudits === 1 ? 'expediente' : 'expedientes'}
+                </span>
               </div>
-            ) : (
-              <div className="space-y-3.5 mt-2">
-                {categoryStats.map((item, idx) => (
-                  <div key={idx} className="space-y-1">
-                    <div className="flex items-center justify-between text-xs font-semibold">
-                      <span className="text-slate-700 truncate max-w-[140px] sm:max-w-none">{item.name}</span>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-slate-400 font-normal text-[11px]">
-                          {item.issues} hallazgos
-                        </span>
+              {/* Segmented Bar */}
+              <div className="w-full h-2 bg-black/[0.06] dark:bg-white/[0.08] rounded-full overflow-hidden flex">
+                {totalAudits === 0 ? (
+                  <div className="w-full h-full bg-black/[0.06] dark:bg-white/[0.08]" />
+                ) : (
+                  <>
+                    <div
+                      className="bg-[#34c759] h-full transition-all duration-500"
+                      style={{ width: `${lowPct}%` }}
+                      title={`Bajo Riesgo: ${lowPct}%`}
+                    />
+                    <div
+                      className="bg-[#ff9500] h-full transition-all duration-500"
+                      style={{ width: `${medPct}%` }}
+                      title={`Riesgo Medio: ${medPct}%`}
+                    />
+                    <div
+                      className="bg-[#ff3b30] h-full transition-all duration-500"
+                      style={{ width: `${highPct}%` }}
+                      title={`Riesgo Crítico: ${highPct}%`}
+                    />
+                  </>
+                )}
+              </div>
+              {/* Labels */}
+              <div className="grid grid-cols-3 gap-2 mt-3 text-center text-xs">
+                <div className="p-2 rounded-xl bg-white dark:bg-[#2c2c2e] shadow-xs">
+                  <span className="block font-semibold text-[#34c759]">{lowPct}%</span>
+                  <span className="text-[#86868b] text-[11px]">Bajo ({lowCount})</span>
+                </div>
+                <div className="p-2 rounded-xl bg-white dark:bg-[#2c2c2e] shadow-xs">
+                  <span className="block font-semibold text-[#ff9500]">{medPct}%</span>
+                  <span className="text-[#86868b] text-[11px]">Medio ({mediumCount})</span>
+                </div>
+                <div className="p-2 rounded-xl bg-white dark:bg-[#2c2c2e] shadow-xs">
+                  <span className="block font-semibold text-[#ff3b30]">{highPct}%</span>
+                  <span className="text-[#86868b] text-[11px]">Crítico ({highCount})</span>
+                </div>
+              </div>
+            </div>
+
+            {/* List of 5 Regulatory Axes */}
+            <div className="space-y-3 mt-4">
+              {regulatoryAxes.map((axis, aIdx) => {
+                const Icon = axis.icon;
+                const isOptimal = axis.complianceRate >= 80;
+                const isWarning = axis.complianceRate >= 50 && axis.complianceRate < 80;
+                return (
+                  <div key={axis.id} className="space-y-1.5 p-2 rounded-xl hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-[#0071e3] font-medium">0{aIdx + 1}</span>
+                        <Icon className="w-3.5 h-3.5 text-[#86868b]" />
+                        <span className="font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">{axis.name}</span>
+                        <span className="hidden sm:inline text-[11px] text-[#86868b]">({axis.ruleRef})</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {axis.issues > 0 && (
+                          <span className="text-[10px] font-medium text-[#ff3b30] bg-red-50 dark:bg-red-950/40 px-2 py-0.5 rounded-full">
+                            {axis.issues} {axis.issues === 1 ? 'alerta' : 'alertas'}
+                          </span>
+                        )}
                         <span
-                          className={`font-bold text-[11px] ${
-                            item.complianceRate >= 80 ? 'text-emerald-600' : 'text-amber-600'
+                          className={`font-semibold text-xs ${
+                            isOptimal
+                              ? 'text-[#34c759]'
+                              : isWarning
+                              ? 'text-[#ff9500]'
+                              : 'text-[#ff3b30]'
                           }`}
                         >
-                          {item.complianceRate}%
+                          {totalAudits > 0 ? `${axis.complianceRate}%` : '—'}
                         </span>
                       </div>
                     </div>
-                    {/* Multi-segment Bar */}
-                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden flex">
+                    {/* Linear Gauge */}
+                    <div className="w-full h-1.5 bg-black/[0.04] dark:bg-white/[0.08] rounded-full overflow-hidden">
                       <div
-                        className="bg-emerald-500 h-full transition-all duration-500"
-                        style={{ width: `${item.complianceRate}%` }}
-                      />
-                      <div
-                        className="bg-rose-500 h-full transition-all duration-500"
-                        style={{ width: `${100 - item.complianceRate}%` }}
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          isOptimal ? 'bg-[#34c759]' : isWarning ? 'bg-[#ff9500]' : 'bg-[#ff3b30]'
+                        }`}
+                        style={{ width: `${totalAudits > 0 ? axis.complianceRate : 0}%` }}
                       />
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+                );
+              })}
+            </div>
           </div>
         </div>
 
-        {/* Card 3: Urgent Deadlines Notification Widget */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-xs flex flex-col justify-between md:col-span-2 lg:col-span-1">
+        {/* Columna Derecha (5 de 12): Próximos Vencimientos Legales */}
+        <div className="lg:col-span-5 bg-white dark:bg-[#1c1c1e] rounded-3xl p-6 border border-black/[0.04] dark:border-white/[0.06] shadow-xs flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+            <div className="flex items-center justify-between pb-3 border-b border-black/[0.04] dark:border-white/[0.06]">
               <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-rose-600" />
-                <h3 className="text-base font-bold text-[#0F2744]">Próximos Vencimientos</h3>
+                <Bell className="w-4 h-4 text-[#0071e3]" />
+                <h2 className="text-base font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] tracking-tight">
+                  Próximos Vencimientos
+                </h2>
               </div>
-              {deadlines.length > 0 && (
-                <span className="text-[10px] font-bold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full animate-pulse">
-                  Urgente
-                </span>
-              )}
+              <button
+                onClick={() => onNavigateTab('alerts')}
+                className="text-xs font-medium text-[#0071e3] hover:underline cursor-pointer flex items-center gap-0.5"
+              >
+                <span>Ver todos</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
             </div>
 
-            <p className="text-xs text-slate-500 mb-4">
-              Alertas automáticas de no renovación, revisión y terminación legal.
+            <p className="text-xs text-[#86868b] mt-1.5 mb-4">
+              Preavisos y plazos resolutorios de contratos auditados
             </p>
 
             <div className="space-y-3">
-              {deadlines.length === 0 ? (
-                <div className="py-10 text-center text-slate-400 space-y-2">
-                  <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
-                  <p className="text-xs font-bold text-slate-700">Sin alertas pendientes</p>
-                  <p className="text-[11px] text-slate-400">
-                    Todos los plazos contractuales se encuentran al día.
+              {activeDeadlines.length === 0 ? (
+                <div className="py-12 text-center text-[#86868b] space-y-2">
+                  <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-[#34c759] flex items-center justify-center mx-auto">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <p className="text-xs font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">Sin alertas pendientes</p>
+                  <p className="text-[11px] text-[#86868b] max-w-xs mx-auto">
+                    Todos los contratos auditados se encuentran al día sin compromisos vencidos.
                   </p>
                 </div>
               ) : (
-                deadlines.slice(0, 3).map((dl, idx) => (
-                  <div
-                    key={dl.id || idx}
-                    className={`p-3 rounded-xl border text-xs transition-all ${
-                      dl.urgency === 'urgent'
-                        ? 'bg-rose-50/70 border-rose-200 text-rose-950'
-                        : 'bg-amber-50/70 border-amber-200 text-amber-950'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="font-bold text-slate-800 line-clamp-1">{dl.title}</span>
-                      <span
-                        className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-md shrink-0 ${
-                          dl.urgency === 'urgent'
-                            ? 'bg-rose-600 text-white'
-                            : 'bg-amber-500 text-white'
-                        }`}
-                      >
-                        {dl.daysRemaining !== undefined ? `${dl.daysRemaining}d` : 'Inminente'}
-                      </span>
+                activeDeadlines.map((dl, idx) => {
+                  const isUrgent = dl.urgency === 'urgent';
+                  return (
+                    <div
+                      key={dl.id || idx}
+                      onClick={() => onNavigateTab('alerts')}
+                      className={`p-3.5 rounded-2xl border text-xs transition-all cursor-pointer hover:shadow-xs ${
+                        isUrgent
+                          ? 'bg-red-50/40 dark:bg-red-950/20 border-red-200 dark:border-red-900/60'
+                          : 'bg-amber-50/40 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/60'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] line-clamp-1">{dl.title}</span>
+                        <span
+                          className={`text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${
+                            isUrgent
+                              ? 'bg-[#ff3b30] text-white'
+                              : 'bg-[#ff9500] text-white'
+                          }`}
+                        >
+                          {dl.daysRemaining !== undefined
+                            ? dl.daysRemaining <= 0
+                              ? 'Hoy'
+                              : `${dl.daysRemaining}d`
+                            : 'Próximo'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#86868b] mt-1 line-clamp-1">{dl.description}</p>
+                      <div className="flex items-center justify-between text-[10px] text-[#86868b] mt-2 pt-2 border-t border-black/[0.04] dark:border-white/[0.06]">
+                        <span className="font-medium text-[#1d1d1f] dark:text-[#f5f5f7] truncate max-w-[180px]">
+                          {dl.contractTitle || 'Contrato'}
+                        </span>
+                        <span>Límite: {dl.date}</span>
+                      </div>
                     </div>
-                    <p className="text-[11px] text-slate-600 mt-1 line-clamp-2">{dl.description}</p>
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 mt-2 font-medium">
-                      <span>Fecha límite: {dl.date}</span>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
-
-          <button
-            onClick={() => onNavigateTab('alerts')}
-            className="w-full mt-4 py-2 px-3 rounded-xl text-xs font-bold text-[#0F2744] bg-slate-100 hover:bg-slate-200 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-          >
-            <span>Gestionar todas las alertas</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
         </div>
       </div>
 
-      {/* Recent Audited Documents Table */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden">
-        <div className="p-5 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      {/* ── 4. Bottom Section: Recent Documents Table ───── */}
+      <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl border border-black/[0.04] dark:border-white/[0.06] shadow-xs overflow-hidden">
+        <div className="p-5 sm:p-6 border-b border-black/[0.04] dark:border-white/[0.06] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h3 className="text-base font-bold text-[#0F2744]">
-              Documentos Auditados Recientemente
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Acceso rápido a los últimos contratos analizados, dictámenes y exportaciones.
+            <h2 className="text-base font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] tracking-tight">
+              Registro de Expedientes Recientes
+            </h2>
+            <p className="text-xs text-[#86868b] mt-0.5">
+              Auditorías realizadas con trazabilidad normativa
             </p>
           </div>
-          <button
-            onClick={() => onNavigateTab('history')}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#1E3E62] hover:text-[#0F2744] cursor-pointer"
-          >
-            <span>Ver historial completo</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </button>
+          {filteredAudits.length > 0 && (
+            <button
+              onClick={() => onNavigateTab('history')}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-[#0071e3] hover:underline cursor-pointer"
+            >
+              <span>Ver todos los expedientes</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50/80 text-slate-500 border-b border-slate-200 font-semibold uppercase tracking-wider text-[10px]">
+            <thead className="bg-black/[0.02] dark:bg-white/[0.04] text-[#86868b] border-b border-black/[0.04] dark:border-white/[0.06] uppercase tracking-wider text-[11px]">
               <tr>
-                <th className="py-3 px-4">Contrato / Documento</th>
-                <th className="py-3 px-4">Tipo Legal</th>
-                <th className="py-3 px-4">Fecha Auditoría</th>
-                <th className="py-3 px-4">Riesgo Global</th>
-                <th className="py-3 px-4">Cumplimiento</th>
-                <th className="py-3 px-4">Estado</th>
-                <th className="py-3 px-4 text-right">Acciones</th>
+                <th className="py-3 px-4 font-medium">Contrato / Documento</th>
+                <th className="py-3 px-4 font-medium">Tipología Legal</th>
+                <th className="py-3 px-4 font-medium">Nivel de Riesgo</th>
+                <th className="py-3 px-4 font-medium">Cumplimiento</th>
+                <th className="py-3 px-4 font-medium">Fecha</th>
+                <th className="py-3 px-4 font-medium text-right">Acción</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
+            <tbody className="divide-y divide-black/[0.04] dark:divide-white/[0.06] text-[#1d1d1f] dark:text-[#f5f5f7]">
               {filteredAudits.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 px-4 text-center">
+                  <td colSpan={6} className="py-12 px-4 text-center">
                     <div className="max-w-sm mx-auto flex flex-col items-center">
-                      <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mb-3 shadow-xs">
+                      <div className="w-12 h-12 rounded-full bg-black/[0.04] dark:bg-white/[0.06] text-[#86868b] flex items-center justify-center mb-3">
                         <FileText className="w-6 h-6" />
                       </div>
-                      <p className="text-sm font-bold text-[#0F2744]">Sin contratos auditados</p>
-                      <p className="text-xs text-slate-400 mt-1 mb-4">
-                        Sube un archivo PDF para auditarlo en tiempo real con IA y el motor normativo 2026.
+                      <p className="text-sm font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                        {timeFilter === 'all'
+                          ? 'Sin expedientes registrados'
+                          : `Sin registros en el período: ${timeFilter === 'today' ? 'Hoy' : timeFilter === 'week' ? '7 días' : '30 días'}`}
                       </p>
-                      <button
-                        onClick={() => onNavigateTab('upload')}
-                        className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#0F2744] hover:bg-[#1E3E62] transition-all shadow-xs cursor-pointer active:scale-95"
-                      >
-                        + Cargar Primer Contrato
-                      </button>
+                      <p className="text-xs text-[#86868b] mt-1">
+                        {timeFilter === 'all'
+                          ? 'Inicia una nueva auditoría desde la barra superior para generar el dictamen legal.'
+                          : 'Selecciona "Todos" en el selector superior para consultar el historial completo.'}
+                      </p>
                     </div>
                   </td>
                 </tr>
               ) : (
-                filteredAudits.slice(0, 4).map((audit) => {
-                const isRiskHigh = audit.overallRiskScore > 60;
-                const isRiskMedium = audit.overallRiskScore > 35 && audit.overallRiskScore <= 60;
-                return (
-                  <tr
-                    key={audit.id}
-                    className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
-                    onClick={() => onSelectAudit(audit)}
-                  >
-                    <td className="py-3.5 px-4 font-semibold text-[#0F2744]">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#1E3E62] flex items-center justify-center shrink-0">
-                          <FileText className="w-4 h-4" />
+                filteredAudits.slice(0, 5).map((audit) => {
+                  const isHigh = audit.overallRiskScore > 60;
+                  const isMed = audit.overallRiskScore > 35 && audit.overallRiskScore <= 60;
+                  return (
+                    <tr
+                      key={audit.id}
+                      onClick={() => onSelectAudit(audit)}
+                      className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors group cursor-pointer"
+                    >
+                      <td className="py-3.5 px-4 font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] flex items-center justify-center shrink-0">
+                            <FileText className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] group-hover:text-[#0071e3] transition-colors line-clamp-1">
+                              {audit.contractTitle}
+                            </p>
+                            <p className="text-[11px] text-[#86868b] font-normal">
+                              {audit.fileName} {audit.fileSize ? `• ${audit.fileSize}` : ''}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-bold text-slate-900 group-hover:text-blue-700 transition-colors">
-                            {audit.contractTitle}
-                          </p>
-                          <p className="text-[10px] text-slate-400 font-normal">
-                            {audit.fileName} ({audit.fileSize || 'PDF'})
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-600 font-medium">{audit.documentType}</td>
-                    <td className="py-3.5 px-4 text-slate-500">{audit.auditDate}</td>
-                    <td className="py-3.5 px-4">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                          isRiskHigh
-                            ? 'bg-rose-100 text-rose-700'
-                            : isRiskMedium
-                            ? 'bg-amber-100 text-amber-700'
-                            : 'bg-emerald-100 text-emerald-700'
-                        }`}
-                      >
-                        {audit.overallRiskScore} / 100
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-800">{audit.complianceScore}%</span>
-                        <div className="w-14 h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${
-                              audit.complianceScore >= 80 ? 'bg-emerald-500' : 'bg-rose-500'
+                      </td>
+                      <td className="py-3.5 px-4 text-[#86868b] font-medium">
+                        <span className="text-[11px] bg-black/[0.04] dark:bg-white/[0.06] px-2.5 py-0.5 rounded-full">
+                          {audit.documentType || 'Mercantil'}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium ${
+                            isHigh
+                              ? 'bg-red-50 dark:bg-red-950/50 text-[#ff3b30]'
+                              : isMed
+                              ? 'bg-amber-50 dark:bg-amber-950/50 text-[#ff9500]'
+                              : 'bg-emerald-50 dark:bg-emerald-950/50 text-[#34c759]'
+                          }`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              isHigh ? 'bg-[#ff3b30]' : isMed ? 'bg-[#ff9500]' : 'bg-[#34c759]'
                             }`}
-                            style={{ width: `${audit.complianceScore}%` }}
                           />
+                          {isHigh ? 'Crítico' : isMed ? 'Medio' : 'Bajo'} ({audit.overallRiskScore})
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] text-xs">
+                            {audit.complianceScore}%
+                          </span>
+                          <div className="w-14 h-1.5 bg-black/[0.04] dark:bg-white/[0.08] rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${
+                                audit.complianceScore >= 80 ? 'bg-[#34c759]' : 'bg-[#ff3b30]'
+                              }`}
+                              style={{ width: `${audit.complianceScore}%` }}
+                            />
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span
-                        className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${
-                          audit.status === 'aprobado'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-amber-50 text-amber-700 border border-amber-200'
-                        }`}
-                      >
-                        {audit.status === 'aprobado' ? 'Aprobado' : 'En Revisión'}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => onSelectAudit(audit)}
-                          className="p-1.5 text-slate-600 hover:text-[#0F2744] hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-                          title="Ver dictamen completo"
-                        >
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onExportPDF(audit)}
-                          className="p-1.5 text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                          title="Descargar PDF"
-                        >
-                          <Download className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              }))}
+                      </td>
+                      <td className="py-3.5 px-4 text-[#86868b] text-xs">
+                        {audit.auditDate}
+                      </td>
+                      <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => onSelectAudit(audit)}
+                            className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium text-white bg-[#0071e3] hover:bg-[#0077ed] active:scale-[0.98] rounded-full transition-all cursor-pointer shadow-xs"
+                          >
+                            <span>Dictamen</span>
+                            <ChevronRight className="w-3 h-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onExportPDF(audit)}
+                            className="p-1.5 text-[#86868b] hover:text-[#0071e3] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] rounded-full transition-colors cursor-pointer"
+                            title="Exportar dictamen a PDF"
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>

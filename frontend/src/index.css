@@ -1,1 +1,145 @@
 @import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+/* Apple iOS / macOS Design System Tokens */
+:root {
+  --color-primary: #0071e3;
+  --color-primary-hover: #0077ed;
+  --color-primary-active: #005bb5;
+  --color-primary-on-dark: #2997ff;
+  --color-on-primary: #ffffff;
+  
+  --color-ink: #1d1d1f;
+  --color-ink-muted: #86868b;
+  --color-ink-subtle: #a1a1a6;
+  
+  --color-canvas: #f5f5f7;
+  --color-surface-card: #ffffff;
+  --color-surface-secondary: #f5f5f7;
+  --color-surface-tertiary: #e5e5ea;
+  --color-hairline: #e5e5ea;
+  --color-hairline-translucent: rgba(0, 0, 0, 0.08);
+  
+  --color-semantic-success: #34c759;
+  --color-semantic-warning: #ff9500;
+  --color-semantic-error: #ff3b30;
+  --color-semantic-info: #0071e3;
+  
+  --font-primary: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.dark {
+  --color-primary: #2997ff;
+  --color-primary-hover: #47a3ff;
+  --color-primary-active: #0071e3;
+  --color-primary-on-dark: #2997ff;
+  --color-on-primary: #ffffff;
+  
+  --color-ink: #f5f5f7;
+  --color-ink-muted: #98989d;
+  --color-ink-subtle: #636366;
+  
+  --color-canvas: #000000;
+  --color-surface-card: #1c1c1e;
+  --color-surface-secondary: #2c2c2e;
+  --color-surface-tertiary: #3a3a3c;
+  --color-hairline: #38383a;
+  --color-hairline-translucent: rgba(255, 255, 255, 0.1);
+  
+  --color-semantic-success: #30d158;
+  --color-semantic-warning: #ffd60a;
+  --color-semantic-error: #ff453a;
+  --color-semantic-info: #2997ff;
+}
+
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", system-ui, sans-serif;
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Apple Frosted Glass */
+.ios-blur {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Apple Smooth Card */
+.ios-card {
+  background-color: var(--color-surface-card);
+  border: 1px solid var(--color-hairline-translucent);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  border-radius: 1.25rem;
+}
+
+.ios-card-interactive {
+  background-color: var(--color-surface-card);
+  border: 1px solid var(--color-hairline-translucent);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  border-radius: 1.25rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ios-card-interactive:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+/* Apple Segmented Control Container */
+.ios-segmented {
+  background-color: rgba(120, 120, 128, 0.12);
+  padding: 3px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Apple Pill Button */
+.ios-btn-primary {
+  background-color: var(--color-primary);
+  color: #ffffff;
+  border-radius: 9999px;
+  padding: 0.5rem 1.25rem;
+  font-weight: 500;
+  transition: all 0.15s ease-in-out;
+}
+
+.ios-btn-primary:hover {
+  background-color: var(--color-primary-hover);
+  box-shadow: 0 2px 8px rgba(0, 113, 227, 0.3);
+}
+
+.ios-btn-primary:active {
+  transform: scale(0.98);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 9999px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
+}

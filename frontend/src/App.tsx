@@ -11,8 +11,11 @@ import { exportToPDF, exportToWord } from './utils/reportExporter';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 
 function getApiBase(): string {
-  if (typeof window !== 'undefined' && window.location.origin.includes(':3000')) {
-    return 'http://127.0.0.1:8000';
+  if (typeof window !== 'undefined') {
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (isLocal) {
+      return 'http://127.0.0.1:8000';
+    }
   }
   return '';
 }
@@ -42,6 +45,48 @@ export default function App() {
 
   // Active Navigation Tab
   const [currentTab, setCurrentTab] = useState<NavTab>('dashboard');
+
+  // Theme setting: 'light' | 'dark' | 'system'
+  const [themeSetting, setThemeSetting] = useState<'light' | 'dark' | 'system'>(() => {
+    const saved = localStorage.getItem('audiflow_theme_setting');
+    if (saved === 'dark' || saved === 'light' || saved === 'system') return saved;
+    const oldSaved = localStorage.getItem('audiflow_theme');
+    if (oldSaved === 'dark' || oldSaved === 'light') return oldSaved;
+    return 'system';
+  });
+
+  const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(() => {
+    return typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e: MediaQueryListEvent) => setSystemPrefersDark(e.matches);
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
+
+  const effectiveTheme: 'light' | 'dark' =
+    themeSetting === 'system' ? (systemPrefersDark ? 'dark' : 'light') : themeSetting;
+
+  useEffect(() => {
+    if (effectiveTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('audiflow_theme_setting', themeSetting);
+    localStorage.setItem('audiflow_theme', effectiveTheme);
+  }, [effectiveTheme, themeSetting]);
+
+  const handleSetTheme = (target?: 'light' | 'dark' | 'system') => {
+    if (target) {
+      setThemeSetting(target);
+    } else {
+      setThemeSetting((prev) => (effectiveTheme === 'light' ? 'dark' : 'light'));
+    }
+  };
 
   // Audits repository (100% reales, aislado estrictamente por usuario)
   const [audits, setAudits] = useState<ContractAudit[]>(() => {
@@ -374,11 +419,11 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col selection:bg-[#0F2744] selection:text-white">
-      {/* Toast Notification */}
+    <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#000000] text-[#1d1d1f] dark:text-[#f5f5f7] flex flex-col selection:bg-[#0071e3] selection:text-white transition-colors duration-200">
+      {/* Apple Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#0F2744] text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs sm:text-sm font-semibold animate-in slide-in-from-bottom-5 duration-200 border border-slate-700">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+        <div className="fixed bottom-6 right-6 z-50 bg-[#1d1d1f]/90 dark:bg-[#2c2c2e]/90 text-white px-5 py-3 rounded-full shadow-2xl backdrop-blur-xl flex items-center gap-2.5 text-xs sm:text-sm font-medium animate-in slide-in-from-bottom-5 duration-200 border border-white/10">
+          <CheckCircle2 className="w-4 h-4 text-[#34c759] shrink-0" />
           <span>{toastMessage.text}</span>
         </div>
       )}
@@ -396,6 +441,9 @@ export default function App() {
         user={currentUser}
         onLogout={handleLogout}
         deadlines={deadlines}
+        theme={themeSetting}
+        effectiveTheme={effectiveTheme}
+        onToggleTheme={handleSetTheme}
         onSelectDeadline={(dl) => {
           if (dl.contractId) {
             const found = audits.find((a) => a.id === dl.contractId);
@@ -406,6 +454,10 @@ export default function App() {
           }
           setCurrentTab('alerts');
         }}
+        onUserUpdated={(updated) => {
+          setCurrentUser(updated);
+          showToast('Perfil actualizado correctamente', 'success');
+        }}
       />
 
       {/* Main Body */}
@@ -414,6 +466,7 @@ export default function App() {
           <Dashboard
             audits={audits}
             deadlines={deadlines}
+            user={currentUser}
             onSelectAudit={handleSelectAudit}
             onNavigateTab={(tab) => setCurrentTab(tab)}
             onExportPDF={handleExportPDF}
@@ -462,18 +515,18 @@ export default function App() {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white py-6 mt-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+      {/* Apple Footer */}
+      <footer className="border-t border-black/[0.06] dark:border-white/[0.08] bg-transparent py-6 mt-12 transition-colors">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#86868b]">
           <div className="flex items-center gap-2">
-            <span className="font-extrabold text-[#0F2744]">AUDIFLOW</span>
+            <span className="font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">Audiflow</span>
             <span>•</span>
-            <span>Software de Auditoría y Control de Contratos © 2026</span>
+            <span>Software de Auditoría Legal y Control Normativo © 2026</span>
           </div>
-          <div className="flex items-center gap-4 text-slate-400">
+          <div className="flex items-center gap-4 text-[11px]">
             <span>Cifrado de extremo a extremo</span>
             <span>•</span>
-            <span>Cumplimiento Legal y Normativo</span>
+            <span>Cumplimiento Legal y Forense</span>
             <span>•</span>
             <span>Trazabilidad Integral</span>
           </div>
