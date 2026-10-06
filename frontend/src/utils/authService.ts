@@ -61,8 +61,15 @@ export async function initializeUserDatabase(): Promise<void> {
   }
 }
 
+function getAuthEndpoint(action: 'login' | 'register'): string {
+  if (typeof window !== 'undefined' && window.location.origin.includes(':3000')) {
+    return `http://127.0.0.1:8000/v1/auth/${action}`;
+  }
+  return `/v1/auth/${action}`;
+}
+
 /**
- * Registrar una nueva cuenta de usuario real
+ * Registrar una nueva cuenta en la base de datos centralizada (Soporte multidispositivo)
  */
 export async function registerAccount(params: {
   name: string;
@@ -71,12 +78,35 @@ export async function registerAccount(params: {
   role: string;
   password: string;
 }): Promise<{ success: boolean; user?: User; error?: string }> {
-  await initializeUserDatabase();
-  const accounts = getRegisteredAccounts();
-
   const normalizedEmail = params.email.trim().toLowerCase();
 
-  // Validar si el correo ya existe
+  // 1. Intentar registrar en el backend centralizado (para que funcione en todos los dispositivos)
+  try {
+    const res = await fetch(getAuthEndpoint('register'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: params.name.trim(),
+        email: normalizedEmail,
+        password: params.password,
+        company: params.company.trim() || 'Firma de Auditoría',
+        role: params.role || 'Auditor Legal Senior',
+      }),
+    });
+
+    const data = await res.json();
+    if (res.ok && data.success && data.user) {
+      return { success: true, user: data.user };
+    }
+    if (!res.ok) {
+      return { success: false, error: data.detail || data.error || 'Error al registrar la cuenta en el servidor.' };
+    }
+  } catch (err) {
+    console.warn('[Audiflow Auth] Backend API no disponible, utilizando almacenamiento local de contingencia.');
+  }
+
+  // 2. Fallback resiliente en LocalStorage
+  const accounts = getRegisteredAccounts();
   const exists = accounts.some((acc) => acc.email.toLowerCase() === normalizedEmail);
   if (exists) {
     return {
@@ -99,31 +129,48 @@ export async function registerAccount(params: {
   accounts.push(newAccount);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts));
 
-  const authUser: User = {
-    id: newAccount.id,
-    name: newAccount.name,
-    email: newAccount.email,
-    role: newAccount.role,
-    company: newAccount.company,
-  };
-
   return {
     success: true,
-    user: authUser,
+    user: {
+      id: newAccount.id,
+      name: newAccount.name,
+      email: newAccount.email,
+      role: newAccount.role,
+      company: newAccount.company,
+    },
   };
 }
 
 /**
- * Autenticar credenciales contra la base de usuarios registrados
+ * Autenticar credenciales contra la base de datos centralizada (Multidispositivo)
  */
 export async function authenticate(
   email: string,
   password: string
 ): Promise<{ success: boolean; user?: User; error?: string }> {
-  await initializeUserDatabase();
-  const accounts = getRegisteredAccounts();
-
   const normalizedEmail = email.trim().toLowerCase();
+
+  // 1. Intentar validar en la base de datos central del servidor
+  try {
+    const res = await fetch(getAuthEndpoint('login'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: normalizedEmail, password }),
+    });
+
+    const data = await res.json();
+    if (res.ok && data.success && data.user) {
+      return { success: true, user: data.user };
+    }
+    if (!res.ok) {
+      return { success: false, error: data.detail || data.error || 'Credenciales incorrectas.' };
+    }
+  } catch (err) {
+    console.warn('[Audiflow Auth] Backend API no disponible, validando en almacenamiento local.');
+  }
+
+  // 2. Fallback de contingencia en LocalStorage
+  const accounts = getRegisteredAccounts();
   const account = accounts.find((acc) => acc.email.toLowerCase() === normalizedEmail);
 
   if (!account) {
@@ -141,17 +188,15 @@ export async function authenticate(
     };
   }
 
-  const authUser: User = {
-    id: account.id,
-    name: account.name,
-    email: account.email,
-    role: account.role,
-    company: account.company,
-  };
-
   return {
     success: true,
-    user: authUser,
+    user: {
+      id: account.id,
+      name: account.name,
+      email: account.email,
+      role: account.role,
+      company: account.company,
+    },
   };
 }
 

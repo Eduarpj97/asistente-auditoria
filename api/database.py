@@ -79,12 +79,109 @@ def init_sqlite_db():
             FOREIGN KEY (id_documento) REFERENCES documentos(id_documento)
         )
         """)
+        c.execute("""
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id_usuario TEXT PRIMARY KEY,
+            nombre TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            empresa TEXT DEFAULT 'Firma de Auditoría',
+            rol TEXT DEFAULT 'Auditor Legal Senior',
+            activo INTEGER DEFAULT 1,
+            creado_en DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
         conn.commit()
         conn.close()
     except Exception as e:
         print(f"[ERROR] Error inicializando SQLite local: {e}")
 
 init_sqlite_db()
+
+def hash_password(password: str) -> str:
+    import hashlib
+    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+def db_register_user(name: str, email: str, password: str, company: str = "Firma de Auditoría", role: str = "Auditor Legal Senior") -> Dict[str, Any]:
+    import uuid
+    norm_email = email.strip().lower()
+    pwd_hash = hash_password(password)
+    user_id = str(uuid.uuid4())
+    
+    try:
+        conn = sqlite3.connect(SQLITE_DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT id_usuario FROM usuarios WHERE LOWER(email) = ?", (norm_email,))
+        existing = c.fetchone()
+        if existing:
+            conn.close()
+            return {"success": False, "error": "Ya existe una cuenta registrada con este correo electrónico. Por favor inicia sesión."}
+        
+        c.execute("""
+        INSERT INTO usuarios (id_usuario, nombre, email, password_hash, empresa, rol, activo)
+        VALUES (?, ?, ?, ?, ?, ?, 1)
+        """, (user_id, name.strip(), norm_email, pwd_hash, company.strip() or "Firma de Auditoría", role))
+        conn.commit()
+        conn.close()
+        
+        return {
+            "success": True,
+            "user": {
+                "id": user_id,
+                "name": name.strip(),
+                "email": norm_email,
+                "company": company.strip() or "Firma de Auditoría",
+                "role": role
+            }
+        }
+    except Exception as e:
+        return {"success": False, "error": f"Error al registrar usuario: {str(e)}"}
+
+def db_authenticate_user(email: str, password: str) -> Dict[str, Any]:
+    norm_email = email.strip().lower()
+    pwd_hash = hash_password(password)
+    
+    try:
+        conn = sqlite3.connect(SQLITE_DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT id_usuario, nombre, email, password_hash, empresa, rol, activo FROM usuarios WHERE LOWER(email) = ?", (norm_email,))
+        row = c.fetchone()
+        conn.close()
+        
+        if not row:
+            return {"success": False, "error": "No se encontró ninguna cuenta registrada con este correo electrónico. Por favor regístrate."}
+        
+        user_id, nombre, u_email, stored_hash, empresa, rol, activo = row
+        if stored_hash != pwd_hash:
+            return {"success": False, "error": "Contraseña incorrecta. Por favor verifica tus credenciales."}
+        
+        return {
+            "success": True,
+            "user": {
+                "id": user_id,
+                "name": nombre,
+                "email": u_email,
+                "company": empresa,
+                "role": rol
+            }
+        }
+    except Exception as e:
+        return {"success": False, "error": f"Error al autenticar: {str(e)}"}
+
+def seed_default_admin():
+    """Garantiza que la cuenta de Eduardo Pedroza esté siempre registrada y lista para ingresar desde cualquier dispositivo."""
+    try:
+        db_register_user(
+            name="Eduardo Pedroza",
+            email="eduardo.pedroza@audiflow.com",
+            password="Auditor2026!",
+            company="Corporativo Legal Global S.A.",
+            role="Auditor Legal Senior"
+        )
+    except Exception:
+        pass
+
+seed_default_admin()
 
 supabase: Client = None
 

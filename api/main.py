@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 # Cargar variables de entorno
 load_dotenv()
 
-from database import check_db_health
+from database import check_db_health, db_register_user, db_authenticate_user
 from services.ocr_service import extract_text_hybrid
 from services.chunk_service import create_chunks
 from services.risk_scoring_service import risk_engine
@@ -19,7 +19,10 @@ from schemas import (
     ProcessingResponse,
     RiskAssessmentResponse,
     EvaluateRiskRequest,
-    RiskRuleInfo
+    RiskRuleInfo,
+    RegisterRequest,
+    LoginRequest,
+    AuthResponse
 )
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
@@ -66,6 +69,34 @@ async def health_check():
         "ollama_engine": ollama_status,
         "supabase_database": db_status
     }
+
+@app.post("/v1/auth/register", response_model=AuthResponse, summary="Registrar usuario en base de datos centralizada")
+async def register_endpoint(req: RegisterRequest):
+    """
+    Registra una cuenta de usuario en la base de datos central.
+    Garantiza que la cuenta pueda ser utilizada desde cualquier dispositivo (PC, móvil, tablet).
+    """
+    res = db_register_user(
+        name=req.name,
+        email=req.email,
+        password=req.password,
+        company=req.company or "Firma de Auditoría",
+        role=req.role or "Auditor Legal Senior"
+    )
+    if not res.get("success"):
+        raise HTTPException(status_code=400, detail=res.get("error", "Error al registrar la cuenta."))
+    return res
+
+@app.post("/v1/auth/login", response_model=AuthResponse, summary="Autenticar usuario en base de datos centralizada")
+async def login_endpoint(req: LoginRequest):
+    """
+    Autentica credenciales contra la base de datos central.
+    Permite el inicio de sesión multidispositivo sin importar el navegador o terminal.
+    """
+    res = db_authenticate_user(email=req.email, password=req.password)
+    if not res.get("success"):
+        raise HTTPException(status_code=401, detail=res.get("error", "Credenciales incorrectas."))
+    return res
 
 @app.post("/v1/process-pdf", response_model=ProcessingResponse, summary="Procesar PDF y evaluar riesgos normativos")
 async def process_pdf(

@@ -102,3 +102,26 @@ class ProcessingResponse(BaseModel):
                 }
             }
         }
+
+class RegisterRequest(BaseModel):
+    name: str = Field(..., min_length=2, description="Nombre completo del usuario")
+    email: str = Field(..., description="Correo electrónico corporativo")
+    password: str = Field(..., min_length=6, description="Contraseña de acceso")
+    company: Optional[str] = Field("Firma de Auditoría", description="Empresa u organización")
+    role: Optional[str] = Field("Auditor Legal Senior", description="Rol en la plataforma")
+
+class LoginRequest(BaseModel):
+    email: str = Field(..., description="Correo electrónico registrado")
+    password: str = Field(..., description="Contraseña")
+
+class AuthUser(BaseModel):
+    id: str
+    name: str
+    email: str
+    company: str
+    role: str
+
+class AuthResponse(BaseModel):
+    success: bool
+    user: Optional[AuthUser] = None
+    error: Optional[str] = None
