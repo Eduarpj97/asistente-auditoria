@@ -415,7 +415,15 @@ export default function App() {
 
   // If user is not authenticated, show AuthScreen matching the uploaded design
   if (!currentUser) {
-    return <AuthScreen onLoginSuccess={handleLogin} inactivityNotice={inactivityNotice} />;
+    return (
+      <AuthScreen
+        onLoginSuccess={handleLogin}
+        inactivityNotice={inactivityNotice}
+        theme={themeSetting}
+        effectiveTheme={effectiveTheme}
+        onToggleTheme={handleSetTheme}
+      />
+    );
   }
 
   return (

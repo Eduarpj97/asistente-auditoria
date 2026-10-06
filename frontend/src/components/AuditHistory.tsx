@@ -5,7 +5,6 @@ import {
   Filter,
   Download,
   Trash2,
-  ExternalLink,
   ChevronRight,
   LayoutGrid,
   List,
@@ -13,10 +12,9 @@ import {
   CheckCircle2,
   Calendar,
   Building,
-  ArrowUpDown,
   PlusCircle,
 } from 'lucide-react';
-import { ContractAudit, RiskSeverity } from '../types/audit';
+import { ContractAudit } from '../types/audit';
 
 interface AuditHistoryProps {
   audits: ContractAudit[];
@@ -87,46 +85,46 @@ export const AuditHistory: React.FC<AuditHistoryProps> = ({
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3 border-b border-black/[0.04] dark:border-white/[0.06]">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0F2744] tracking-tight">
-            Historial de Documentos Auditados
+          <h1 className="text-2xl sm:text-3xl font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] tracking-tight">
+            Historial de Documentos
           </h1>
-          <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
+          <p className="text-xs sm:text-sm text-[#86868b] mt-0.5">
             Registro cronológico de contratos revisados, dictámenes y trazabilidad legal.
           </p>
         </div>
 
         <button
           onClick={onNavigateUpload}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-[#0F2744] hover:bg-[#16385F] transition-all shadow-xs cursor-pointer self-start sm:self-auto"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-medium text-white bg-[#0071e3] hover:bg-[#0077ed] active:scale-[0.98] transition-all shadow-xs cursor-pointer self-start sm:self-auto"
         >
-          <PlusCircle className="w-4 h-4 text-blue-300" />
+          <PlusCircle className="w-4 h-4 text-white" />
           <span>Auditar Nuevo Contrato</span>
         </button>
       </div>
 
-      {/* Filter and Search Controls Bar */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-3">
+      {/* Filter and Search Controls Bar (Apple Smooth Card) */}
+      <div className="bg-white dark:bg-[#1c1c1e] rounded-2xl p-4 border border-black/[0.04] dark:border-white/[0.06] shadow-xs space-y-3">
         <div className="flex flex-col md:flex-row md:items-center gap-3">
           {/* Search Input */}
           <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#86868b]" />
             <input
               type="text"
               placeholder="Buscar por nombre, partes contratantes o palabras clave..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0F2744] text-xs bg-slate-50/50"
+              className="w-full pl-10 pr-4 py-2 rounded-xl border border-black/[0.06] dark:border-white/[0.08] focus:outline-none focus:border-[#0071e3] focus:bg-white dark:focus:bg-[#1c1c1e] text-xs bg-black/[0.02] dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-[#f5f5f7] placeholder-[#86868b] transition"
             />
           </div>
 
           {/* Risk Level Filter */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <select
               value={selectedRisk}
               onChange={(e) => setSelectedRisk(e.target.value)}
-              className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-[#0F2744] cursor-pointer"
+              className="px-3 py-2 rounded-xl border border-black/[0.06] dark:border-white/[0.08] text-xs font-medium text-[#1d1d1f] dark:text-[#f5f5f7] bg-white dark:bg-[#2c2c2e] focus:outline-none focus:border-[#0071e3] cursor-pointer"
             >
               <option value="all">Nivel de Riesgo: Todos</option>
               <option value="critical">Alto / Crítico (&gt;60)</option>
@@ -138,7 +136,7 @@ export const AuditHistory: React.FC<AuditHistoryProps> = ({
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
-              className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-[#0F2744] cursor-pointer"
+              className="px-3 py-2 rounded-xl border border-black/[0.06] dark:border-white/[0.08] text-xs font-medium text-[#1d1d1f] dark:text-[#f5f5f7] bg-white dark:bg-[#2c2c2e] focus:outline-none focus:border-[#0071e3] cursor-pointer"
             >
               <option value="all">Tipo de Contrato: Todos</option>
               {documentTypes.map((type, idx) => (
@@ -152,7 +150,7 @@ export const AuditHistory: React.FC<AuditHistoryProps> = ({
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-[#0F2744] cursor-pointer"
+              className="px-3 py-2 rounded-xl border border-black/[0.06] dark:border-white/[0.08] text-xs font-medium text-[#1d1d1f] dark:text-[#f5f5f7] bg-white dark:bg-[#2c2c2e] focus:outline-none focus:border-[#0071e3] cursor-pointer"
             >
               <option value="date_desc">Más recientes primero</option>
               <option value="date_asc">Más antiguos primero</option>
@@ -160,13 +158,15 @@ export const AuditHistory: React.FC<AuditHistoryProps> = ({
               <option value="comp_asc">Menor cumplimiento primero</option>
             </select>
 
-            {/* Grid vs Table Toggle */}
-            <div className="hidden sm:flex items-center bg-slate-100 p-1 rounded-xl">
+            {/* Grid vs Table Toggle (iOS Segmented) */}
+            <div className="flex items-center bg-black/[0.04] dark:bg-white/[0.08] p-1 rounded-xl">
               <button
                 type="button"
                 onClick={() => setViewMode('table')}
                 className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                  viewMode === 'table' ? 'bg-white text-[#0F2744] shadow-xs' : 'text-slate-400'
+                  viewMode === 'table'
+                    ? 'bg-white dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-white shadow-xs'
+                    : 'text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]'
                 }`}
                 title="Vista de Tabla"
               >
@@ -176,7 +176,9 @@ export const AuditHistory: React.FC<AuditHistoryProps> = ({
                 type="button"
                 onClick={() => setViewMode('grid')}
                 className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                  viewMode === 'grid' ? 'bg-white text-[#0F2744] shadow-xs' : 'text-slate-400'
+                  viewMode === 'grid'
+                    ? 'bg-white dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-white shadow-xs'
+                    : 'text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]'
                 }`}
                 title="Vista de Tarjetas"
               >
@@ -187,7 +189,7 @@ export const AuditHistory: React.FC<AuditHistoryProps> = ({
         </div>
 
         {/* Counter Badge */}
-        <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
+        <div className="flex items-center justify-between text-xs text-[#86868b] pt-1">
           <span>Mostrando {filteredAudits.length} de {audits.length} contratos auditados</span>
           {(searchTerm || selectedRisk !== 'all' || selectedType !== 'all') && (
             <button
@@ -196,7 +198,7 @@ export const AuditHistory: React.FC<AuditHistoryProps> = ({
                 setSelectedRisk('all');
                 setSelectedType('all');
               }}
-              className="text-[#1E3E62] font-semibold hover:underline cursor-pointer"
+              className="text-[#0071e3] font-medium hover:underline cursor-pointer"
             >
               Restablecer filtros
             </button>
@@ -206,23 +208,23 @@ export const AuditHistory: React.FC<AuditHistoryProps> = ({
 
       {/* Main Content Area */}
       {filteredAudits.length === 0 ? (
-        <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 shadow-xs space-y-4">
-          <div className="w-16 h-16 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+        <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl p-12 text-center border border-black/[0.04] dark:border-white/[0.06] shadow-xs space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-black/[0.03] dark:bg-white/[0.06] text-[#86868b] flex items-center justify-center mx-auto">
             <FileText className="w-8 h-8" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-[#0F2744]">No se encontraron documentos</h3>
-            <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+            <h3 className="text-base font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">No se encontraron documentos</h3>
+            <p className="text-xs text-[#86868b] mt-1 max-w-sm mx-auto">
               No hay contratos que coincidan con los filtros aplicados. Intenta ampliar tus criterios de búsqueda.
             </p>
           </div>
         </div>
       ) : viewMode === 'table' ? (
-        /* TABLE VIEW */
-        <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden">
+        /* TABLE VIEW (Apple Rounded Card Table) */
+        <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl border border-black/[0.04] dark:border-white/[0.06] shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 font-semibold uppercase tracking-wider text-[10px]">
+              <thead className="bg-black/[0.02] dark:bg-white/[0.04] text-[#86868b] border-b border-black/[0.04] dark:border-white/[0.06] font-medium uppercase tracking-wider text-[11px]">
                 <tr>
                   <th className="py-3.5 px-5">Contrato y Archivo</th>
                   <th className="py-3.5 px-4">Tipo Legal</th>
@@ -234,7 +236,7 @@ export const AuditHistory: React.FC<AuditHistoryProps> = ({
                   <th className="py-3.5 px-5 text-right">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700">
+              <tbody className="divide-y divide-black/[0.04] dark:divide-white/[0.06] text-[#1d1d1f] dark:text-[#f5f5f7]">
                 {filteredAudits.map((audit) => {
                   const isRiskHigh = audit.overallRiskScore > 60;
                   const isRiskMedium = audit.overallRiskScore > 35 && audit.overallRiskScore <= 60;
@@ -243,36 +245,40 @@ export const AuditHistory: React.FC<AuditHistoryProps> = ({
                     <tr
                       key={audit.id}
                       onClick={() => onSelectAudit(audit)}
-                      className="hover:bg-slate-50/80 transition-colors group cursor-pointer"
+                      className="hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-colors group cursor-pointer"
                     >
                       <td className="py-4 px-5">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#1E3E62] flex items-center justify-center shrink-0">
+                          <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] flex items-center justify-center shrink-0">
                             <FileText className="w-4 h-4" />
                           </div>
                           <div className="min-w-0">
-                            <p className="font-bold text-slate-900 group-hover:text-blue-700 transition-colors truncate max-w-xs">
+                            <p className="font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] group-hover:text-[#0071e3] transition-colors truncate max-w-xs">
                               {audit.contractTitle}
                             </p>
-                            <p className="text-[11px] text-slate-400 font-normal truncate max-w-xs mt-0.5">
+                            <p className="text-[11px] text-[#86868b] font-normal truncate max-w-xs mt-0.5">
                               {audit.fileName} • {audit.fileSize || 'PDF'}
                             </p>
                           </div>
                         </div>
                       </td>
-                      <td className="py-4 px-4 font-medium text-slate-600">{audit.documentType}</td>
-                      <td className="py-4 px-4 text-slate-500">{audit.auditDate}</td>
+                      <td className="py-4 px-4 font-medium text-[#86868b]">
+                        <span className="text-[11px] bg-black/[0.04] dark:bg-white/[0.06] px-2.5 py-0.5 rounded-full">
+                          {audit.documentType || 'Mercantil'}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 text-[#86868b]">{audit.auditDate}</td>
                       <td className="py-4 px-4">
-                        <span className="font-semibold text-rose-600">{audit.expirationDate}</span>
+                        <span className="font-medium text-[#ff3b30]">{audit.expirationDate}</span>
                       </td>
                       <td className="py-4 px-4">
                         <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             isRiskHigh
-                              ? 'bg-rose-100 text-rose-700'
+                              ? 'bg-red-50 dark:bg-red-950/50 text-[#ff3b30]'
                               : isRiskMedium
-                              ? 'bg-amber-100 text-amber-700'
-                              : 'bg-emerald-100 text-emerald-700'
+                              ? 'bg-amber-50 dark:bg-amber-950/50 text-[#ff9500]'
+                              : 'bg-emerald-50 dark:bg-emerald-950/50 text-[#34c759]'
                           }`}
                         >
                           {audit.overallRiskScore} / 100
@@ -280,11 +286,11 @@ export const AuditHistory: React.FC<AuditHistoryProps> = ({
                       </td>
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-slate-800">{audit.complianceScore}%</span>
-                          <div className="w-12 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                          <span className="font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">{audit.complianceScore}%</span>
+                          <div className="w-12 h-1.5 bg-black/[0.04] dark:bg-white/[0.08] rounded-full overflow-hidden">
                             <div
                               className={`h-full ${
-                                audit.complianceScore >= 80 ? 'bg-emerald-500' : 'bg-rose-500'
+                                audit.complianceScore >= 80 ? 'bg-[#34c759]' : 'bg-[#ff3b30]'
                               }`}
                               style={{ width: `${audit.complianceScore}%` }}
                             />
@@ -293,10 +299,10 @@ export const AuditHistory: React.FC<AuditHistoryProps> = ({
                       </td>
                       <td className="py-4 px-4">
                         <span
-                          className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wider ${
                             audit.status === 'aprobado'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : 'bg-amber-50 text-amber-700 border border-amber-200'
+                              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-[#34c759]'
+                              : 'bg-amber-50 dark:bg-amber-950/40 text-[#ff9500]'
                           }`}
                         >
                           {audit.status === 'aprobado' ? 'Aprobado' : 'En Revisión'}
@@ -307,7 +313,7 @@ export const AuditHistory: React.FC<AuditHistoryProps> = ({
                           <button
                             type="button"
                             onClick={() => onSelectAudit(audit)}
-                            className="p-1.5 text-slate-600 hover:text-[#0F2744] hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                            className="p-1.5 text-[#86868b] hover:text-[#0071e3] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] rounded-full transition-colors cursor-pointer"
                             title="Ver Dictamen"
                           >
                             <ChevronRight className="w-4 h-4" />
@@ -315,7 +321,7 @@ export const AuditHistory: React.FC<AuditHistoryProps> = ({
                           <button
                             type="button"
                             onClick={() => onExportPDF(audit)}
-                            className="p-1.5 text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                            className="p-1.5 text-[#86868b] hover:text-[#ff3b30] hover:bg-red-50 dark:hover:bg-red-950/30 rounded-full transition-colors cursor-pointer"
                             title="Descargar PDF"
                           >
                             <Download className="w-4 h-4" />
@@ -327,7 +333,7 @@ export const AuditHistory: React.FC<AuditHistoryProps> = ({
                                 onDeleteAudit(audit.id);
                               }
                             }}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                            className="p-1.5 text-[#86868b] hover:text-[#ff3b30] hover:bg-red-50 dark:hover:bg-red-950/30 rounded-full transition-colors cursor-pointer"
                             title="Eliminar"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -342,7 +348,7 @@ export const AuditHistory: React.FC<AuditHistoryProps> = ({
           </div>
         </div>
       ) : (
-        /* GRID / CARDS VIEW */
+        /* GRID / CARDS VIEW (Apple Style Cards) */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredAudits.map((audit) => {
             const isRiskHigh = audit.overallRiskScore > 60;
@@ -352,53 +358,53 @@ export const AuditHistory: React.FC<AuditHistoryProps> = ({
               <div
                 key={audit.id}
                 onClick={() => onSelectAudit(audit)}
-                className="bg-white rounded-3xl p-6 border border-slate-200 hover:border-[#0F2744] shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group"
+                className="bg-white dark:bg-[#1c1c1e] rounded-3xl p-6 border border-black/[0.04] dark:border-white/[0.06] hover:border-[#0071e3] shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group"
               >
                 <div>
-                  <div className="flex items-center justify-between text-xs text-slate-400 mb-3">
-                    <span className="font-semibold text-[#1E3E62] bg-blue-50 px-2.5 py-0.5 rounded-full">
+                  <div className="flex items-center justify-between text-xs text-[#86868b] mb-3">
+                    <span className="font-medium text-[#0071e3] bg-blue-50 dark:bg-blue-950/40 px-2.5 py-0.5 rounded-full">
                       {audit.documentType}
                     </span>
                     <span>{audit.auditDate}</span>
                   </div>
 
-                  <h3 className="text-base font-extrabold text-[#0F2744] group-hover:text-blue-700 transition-colors line-clamp-2">
+                  <h3 className="text-base font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] group-hover:text-[#0071e3] transition-colors line-clamp-2">
                     {audit.contractTitle}
                   </h3>
 
-                  <p className="text-xs text-slate-500 line-clamp-2 mt-2 leading-relaxed">
+                  <p className="text-xs text-[#86868b] line-clamp-2 mt-2 leading-relaxed">
                     {audit.summary}
                   </p>
 
-                  <div className="mt-4 pt-3 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
+                  <div className="mt-4 pt-3 border-t border-black/[0.04] dark:border-white/[0.06] grid grid-cols-2 gap-2 text-xs">
                     <div>
-                      <span className="text-[10px] text-slate-400 uppercase font-semibold">Riesgo</span>
+                      <span className="text-[10px] text-[#86868b] uppercase font-medium">Riesgo</span>
                       <p
-                        className={`font-black text-sm mt-0.5 ${
-                          isRiskHigh ? 'text-rose-600' : isRiskMedium ? 'text-amber-600' : 'text-emerald-600'
+                        className={`font-semibold text-sm mt-0.5 ${
+                          isRiskHigh ? 'text-[#ff3b30]' : isRiskMedium ? 'text-[#ff9500]' : 'text-[#34c759]'
                         }`}
                       >
                         {audit.overallRiskScore}/100
                       </p>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-400 uppercase font-semibold">Cumplimiento</span>
-                      <p className="font-black text-sm text-slate-800 mt-0.5">
+                      <span className="text-[10px] text-[#86868b] uppercase font-medium">Cumplimiento</span>
+                      <p className="font-semibold text-sm text-[#1d1d1f] dark:text-[#f5f5f7] mt-0.5">
                         {audit.complianceScore}%
                       </p>
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="text-[11px] font-semibold text-rose-600">
+                <div className="mt-5 pt-3 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between text-xs">
+                  <span className="text-[11px] font-medium text-[#ff3b30]">
                     Vence: {audit.expirationDate}
                   </span>
                   <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                     <button
                       type="button"
                       onClick={() => onExportWord(audit)}
-                      className="p-1.5 text-slate-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                      className="p-1.5 text-[#86868b] hover:text-[#0071e3] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] rounded-full transition-colors cursor-pointer"
                       title="Exportar Word"
                     >
                       <FileText className="w-3.5 h-3.5" />
@@ -406,7 +412,7 @@ export const AuditHistory: React.FC<AuditHistoryProps> = ({
                     <button
                       type="button"
                       onClick={() => onExportPDF(audit)}
-                      className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                      className="p-1.5 text-[#86868b] hover:text-[#ff3b30] hover:bg-red-50 dark:hover:bg-red-950/30 rounded-full transition-colors cursor-pointer"
                       title="Exportar PDF"
                     >
                       <Download className="w-3.5 h-3.5" />
@@ -414,7 +420,7 @@ export const AuditHistory: React.FC<AuditHistoryProps> = ({
                     <button
                       type="button"
                       onClick={() => onSelectAudit(audit)}
-                      className="p-1.5 text-slate-700 hover:text-[#0F2744] hover:bg-slate-100 rounded-lg transition-colors cursor-pointer font-bold flex items-center"
+                      className="p-1.5 text-[#86868b] hover:text-[#0071e3] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] rounded-full transition-colors cursor-pointer flex items-center"
                     >
                       <ChevronRight className="w-4 h-4" />
                     </button>

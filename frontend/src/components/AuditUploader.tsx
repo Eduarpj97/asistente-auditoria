@@ -312,29 +312,29 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
     <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-200">
       {/* Header */}
       <div className="text-center max-w-2xl mx-auto">
-        <span className="text-[11px] font-bold uppercase tracking-widest text-[#1E3E62] bg-blue-50 px-3 py-1 rounded-full border border-blue-200/60 inline-flex items-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-          Inteligencia Artificial de Auditoría Contractual
+        <span className="text-[11px] font-medium uppercase tracking-wider text-[#0071e3] dark:text-[#2997ff] bg-blue-50 dark:bg-blue-950/40 px-3 py-1 rounded-full border border-blue-200/40 dark:border-blue-900/40 inline-flex items-center gap-1.5">
+          <Sparkles className="w-3.5 h-3.5 text-[#0071e3]" />
+          Auditoría Contractual con IA
         </span>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0F2744] tracking-tight mt-3">
+        <h1 className="text-2xl sm:text-3xl font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] tracking-tight mt-3">
           Cargar Archivo y Analizar Contrato
         </h1>
-        <p className="text-slate-500 text-xs sm:text-sm mt-1.5 leading-relaxed">
+        <p className="text-[#86868b] text-xs sm:text-sm mt-1.5 leading-relaxed">
           Sube tus contratos en formato PDF para escanear automáticamente cada cláusula, identificar
           riesgos críticos, plazos de vencimiento y generar dictámenes legales accionables.
         </p>
       </div>
 
-      {/* Input Mode Selector */}
+      {/* Input Mode Selector (iOS Segmented Pill) */}
       <div className="flex justify-center">
-        <div className="inline-flex bg-slate-100 p-1 rounded-xl">
+        <div className="inline-flex bg-black/[0.04] dark:bg-white/[0.08] p-1 rounded-full">
           <button
             type="button"
             onClick={() => setInputMode('upload')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all cursor-pointer ${
               inputMode === 'upload'
-                ? 'bg-white text-[#0F2744] shadow-xs'
-                : 'text-slate-500 hover:text-slate-800'
+                ? 'bg-white dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-[#f5f5f7] shadow-xs'
+                : 'text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]'
             }`}
           >
             <UploadCloud className="w-4 h-4" />
@@ -343,10 +343,10 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
           <button
             type="button"
             onClick={() => setInputMode('text')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium transition-all cursor-pointer ${
               inputMode === 'text'
-                ? 'bg-white text-[#0F2744] shadow-xs'
-                : 'text-slate-500 hover:text-slate-800'
+                ? 'bg-white dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-[#f5f5f7] shadow-xs'
+                : 'text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]'
             }`}
           >
             <FileCode className="w-4 h-4" />
@@ -357,16 +357,16 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
 
       {/* Error Alert */}
       {errorMessage && (
-        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs sm:text-sm flex items-start gap-3">
+        <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-[#ff3b30] text-xs sm:text-sm flex items-start gap-3">
           <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
           <div>
-            <p className="font-bold">Atención en la carga</p>
-            <p className="mt-0.5 text-rose-600">{errorMessage}</p>
+            <p className="font-semibold">Atención en la carga</p>
+            <p className="mt-0.5 opacity-90">{errorMessage}</p>
           </div>
         </div>
       )}
 
-      {/* Main Upload Area */}
+      {/* Main Upload Area (Apple Style) */}
       {inputMode === 'upload' ? (
         <div
           onDragOver={(e) => {
@@ -376,12 +376,12 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
           onDragLeave={() => setIsDragging(false)}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className={`relative border-2 border-dashed rounded-3xl p-8 sm:p-12 text-center transition-all cursor-pointer group ${
+          className={`relative border-2 border-dashed rounded-3xl p-8 sm:p-12 text-center transition-all cursor-pointer group bg-white dark:bg-[#1c1c1e] shadow-xs ${
             isDragging
-              ? 'border-blue-600 bg-blue-50/60 shadow-lg scale-[1.01]'
+              ? 'border-[#0071e3] bg-blue-50/40 dark:bg-blue-950/40 shadow-md scale-[1.01]'
               : selectedFile
-              ? 'border-emerald-500 bg-emerald-50/20'
-              : 'border-slate-300 hover:border-[#0F2744] bg-white hover:bg-slate-50/70 shadow-xs'
+              ? 'border-[#34c759] bg-emerald-50/20 dark:bg-emerald-950/20'
+              : 'border-black/[0.08] dark:border-white/[0.12] hover:border-[#0071e3]'
           }`}
         >
           <input
@@ -398,38 +398,38 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
 
           {selectedFile ? (
             <div className="space-y-4">
-              <div className="w-16 h-16 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto shadow-inner">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-[#34c759] flex items-center justify-center mx-auto shadow-xs">
                 <FileCheck className="w-8 h-8" />
               </div>
               <div>
-                <p className="text-base font-extrabold text-[#0F2744]">{selectedFile.name}</p>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-base font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">{selectedFile.name}</p>
+                <p className="text-xs text-[#86868b] mt-1">
                   Tamaño: {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB • Formato PDF listo
                   para auditar
                 </p>
               </div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-[#34c759] text-xs font-medium">
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 <span>Archivo cargado correctamente</span>
               </div>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-[#86868b]">
                 Haz clic si deseas seleccionar otro documento o presiona el botón inferior para auditar.
               </p>
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="w-16 h-16 rounded-2xl bg-slate-100 text-[#0F2744] group-hover:scale-110 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all duration-300 flex items-center justify-center mx-auto shadow-xs">
+              <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-[#0071e3] group-hover:scale-105 transition-all duration-300 flex items-center justify-center mx-auto shadow-xs">
                 <UploadCloud className="w-8 h-8" />
               </div>
               <div>
-                <p className="text-base font-bold text-[#0F2744]">
+                <p className="text-base font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
                   Arrastra y suelta tu contrato PDF aquí
                 </p>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-[#86868b] mt-1">
                   o haz clic para explorar en tus carpetas locales
                 </p>
               </div>
-              <div className="flex items-center justify-center gap-3 text-[11px] text-slate-400 font-medium">
+              <div className="flex items-center justify-center gap-3 text-[11px] text-[#86868b] font-normal">
                 <span>Formatos soportados: PDF, TXT</span>
                 <span>•</span>
                 <span>Hasta 20 MB por documento</span>
@@ -441,12 +441,12 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
         </div>
       ) : (
         /* Text Editor Mode */
-        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs space-y-3">
+        <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl p-6 border border-black/[0.04] dark:border-white/[0.06] shadow-xs space-y-3">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-bold text-slate-700">
+            <label className="text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
               Texto o cláusulas del contrato a evaluar
             </label>
-            <span className="text-[11px] text-slate-400">
+            <span className="text-[11px] text-[#86868b]">
               {contractText.length} caracteres ingresados
             </span>
           </div>
@@ -455,36 +455,36 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
             onChange={(e) => setContractText(e.target.value)}
             rows={10}
             placeholder="Pega aquí el contenido textual de tu contrato, adenda o cláusulas contractuales..."
-            className="w-full p-4 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#0F2744] text-xs sm:text-sm font-mono leading-relaxed bg-slate-50/50 hover:bg-white transition-colors"
+            className="w-full p-4 rounded-xl border border-black/[0.06] dark:border-white/[0.08] focus:outline-none focus:border-[#0071e3] focus:bg-white dark:focus:bg-[#1c1c1e] text-xs sm:text-sm font-mono leading-relaxed bg-black/[0.02] dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-[#f5f5f7] transition-colors"
           />
         </div>
       )}
 
       {/* Preset Sample Contracts Selector */}
-      <div className="bg-gradient-to-r from-slate-50 to-blue-50/40 rounded-2xl p-5 border border-slate-200/80">
+      <div className="bg-black/[0.02] dark:bg-white/[0.04] rounded-2xl p-5 border border-black/[0.04] dark:border-white/[0.06]">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <FileText className="w-4 h-4 text-blue-600" />
-            <h4 className="text-xs font-bold text-[#0F2744] uppercase tracking-wider">
+            <FileText className="w-4 h-4 text-[#0071e3]" />
+            <h4 className="text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] tracking-tight">
               ¿No tienes un PDF a mano? Prueba con un contrato de ejemplo:
             </h4>
           </div>
-          <span className="text-[10px] text-slate-400 font-medium">1-Clic Carga Inmediata</span>
+          <span className="text-[11px] text-[#86868b]">1-Clic Carga Inmediata</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <button
             type="button"
             onClick={() => handleSelectSample('saas')}
-            className="p-3 text-left rounded-xl bg-white border border-slate-200 hover:border-emerald-600 hover:shadow-xs transition-all cursor-pointer group"
+            className="p-3.5 text-left rounded-2xl bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/[0.08] hover:border-[#34c759] hover:shadow-xs transition-all cursor-pointer group"
           >
             <div className="flex items-center justify-between">
-              <p className="text-xs font-bold text-slate-800 group-hover:text-emerald-700">
+              <p className="text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] group-hover:text-[#34c759]">
                 SaaS & SLA Conforme
               </p>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">Bajo</span>
+              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-[#34c759]">Bajo</span>
             </div>
-            <p className="text-[11px] text-slate-500 mt-1 line-clamp-2">
+            <p className="text-[11px] text-[#86868b] mt-1 line-clamp-2">
               Cumplimiento conforme: RGPD, SARLAFT, Anticorrupción FCPA y SLA 99.9%.
             </p>
           </button>
@@ -492,15 +492,15 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
           <button
             type="button"
             onClick={() => handleSelectSample('regular')}
-            className="p-3 text-left rounded-xl bg-white border border-slate-200 hover:border-amber-500 hover:shadow-xs transition-all cursor-pointer group"
+            className="p-3.5 text-left rounded-2xl bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/[0.08] hover:border-[#ff9500] hover:shadow-xs transition-all cursor-pointer group"
           >
             <div className="flex items-center justify-between">
-              <p className="text-xs font-bold text-slate-800 group-hover:text-amber-700">
+              <p className="text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] group-hover:text-[#ff9500]">
                 Consultoría Cloud
               </p>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">Medio</span>
+              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-[#ff9500]">Medio</span>
             </div>
-            <p className="text-[11px] text-slate-500 mt-1 line-clamp-2">
+            <p className="text-[11px] text-[#86868b] mt-1 line-clamp-2">
               Observaciones moderadas: limitaciones en derechos de datos y omisión de certificación.
             </p>
           </button>
@@ -508,42 +508,42 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
           <button
             type="button"
             onClick={() => handleSelectSample('alto_riesgo')}
-            className="p-3 text-left rounded-xl bg-white border border-slate-200 hover:border-rose-600 hover:shadow-xs transition-all cursor-pointer group"
+            className="p-3.5 text-left rounded-2xl bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/[0.08] hover:border-[#ff3b30] hover:shadow-xs transition-all cursor-pointer group"
           >
             <div className="flex items-center justify-between">
-              <p className="text-xs font-bold text-slate-800 group-hover:text-rose-700">
+              <p className="text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] group-hover:text-[#ff3b30]">
                 Proveeduría Abusiva
               </p>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">Alto</span>
+              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-red-50 dark:bg-red-950/60 text-[#ff3b30]">Alto</span>
             </div>
-            <p className="text-[11px] text-slate-500 mt-1 line-clamp-2">
+            <p className="text-[11px] text-[#86868b] mt-1 line-clamp-2">
               Riesgo crítico: pagos anónimos, exoneración por dolo y venta libre de datos.
             </p>
           </button>
         </div>
       </div>
 
-      {/* Audit Action Button */}
+      {/* Audit Action Button (Apple Pill Button) */}
       <div className="pt-2 text-center">
         <button
           type="button"
           onClick={handleExecuteAudit}
           disabled={isAuditing || (!selectedFile && !contractText.trim())}
-          className={`w-full sm:w-auto min-w-[280px] py-4 px-8 rounded-2xl font-bold text-sm text-white flex items-center justify-center gap-3 transition-all duration-300 shadow-md cursor-pointer ${
+          className={`w-full sm:w-auto min-w-[280px] py-3.5 px-8 rounded-full font-medium text-sm text-white flex items-center justify-center gap-3 transition-all duration-200 shadow-sm cursor-pointer ${
             isAuditing || (!selectedFile && !contractText.trim())
-              ? 'bg-slate-300 cursor-not-allowed shadow-none'
-              : 'bg-[#0F2744] hover:bg-[#16385F] active:scale-[0.99] shadow-[#0F2744]/20 hover:shadow-lg'
+              ? 'bg-black/20 dark:bg-white/20 text-[#86868b] cursor-not-allowed shadow-none'
+              : 'bg-[#0071e3] hover:bg-[#0077ed] active:scale-[0.99] hover:shadow-md'
           }`}
         >
           {isAuditing ? (
             <>
-              <RefreshCw className="w-5 h-5 animate-spin text-blue-300" />
+              <RefreshCw className="w-4 h-4 animate-spin text-white" />
               <span>Ejecutando Auditoría Legal...</span>
             </>
           ) : (
             <>
-              <Sparkles className="w-5 h-5 text-blue-300" />
-              <span>Iniciar Auditoría Automática con IA</span>
+              <Sparkles className="w-4 h-4 text-white" />
+              <span>Iniciar Auditoría Automática</span>
               <ArrowRight className="w-4 h-4 ml-1" />
             </>
           )}
@@ -552,36 +552,36 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
 
       {/* Progress Scanner Modal / Overlay during Audit */}
       {isAuditing && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-100 text-center space-y-6 animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl rounded-3xl p-8 max-w-md w-full shadow-2xl border border-black/[0.06] dark:border-white/[0.1] text-center space-y-6 animate-in zoom-in-95 duration-200">
             <div className="relative w-20 h-20 mx-auto">
-              <div className="w-20 h-20 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-[#0F2744]">
-                <FileText className="w-10 h-10 animate-pulse text-blue-700" />
+              <div className="w-20 h-20 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200/50 dark:border-blue-900/50 flex items-center justify-center text-[#0071e3]">
+                <FileText className="w-10 h-10 animate-pulse text-[#0071e3]" />
               </div>
-              <div className="absolute -inset-1 rounded-2xl border-2 border-blue-600/30 animate-ping pointer-events-none" />
+              <div className="absolute -inset-1 rounded-2xl border-2 border-[#0071e3]/30 animate-ping pointer-events-none" />
             </div>
 
             <div>
-              <h3 className="text-lg font-extrabold text-[#0F2744]">
+              <h3 className="text-lg font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
                 Audiflow Motor de Auditoría
               </h3>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-[#86868b] mt-1">
                 Analizando el documento con modelos especializados en derecho contractual y riesgos.
               </p>
             </div>
 
             {/* Step Message */}
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-[#1E3E62] flex items-center justify-center gap-2">
-              <RefreshCw className="w-4 h-4 animate-spin text-blue-600 shrink-0" />
+            <div className="p-3.5 rounded-xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.08] text-xs font-medium text-[#1d1d1f] dark:text-[#f5f5f7] flex items-center justify-center gap-2">
+              <RefreshCw className="w-4 h-4 animate-spin text-[#0071e3] shrink-0" />
               <span className="truncate">{auditStep}</span>
             </div>
 
             {/* Animated progress bar */}
-            <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-blue-600 via-indigo-600 to-[#0F2744] animate-[pulse_1.5s_infinite] w-full" />
+            <div className="w-full bg-black/[0.04] dark:bg-white/[0.08] h-2 rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-[#0071e3] to-[#5856d6] animate-[pulse_1.5s_infinite] w-full" />
             </div>
 
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[11px] text-[#86868b]">
               Por favor espera unos segundos mientras se auditan todas las cláusulas.
             </p>
           </div>

@@ -9,18 +9,14 @@ import {
   Clock,
   Printer,
   Sparkles,
-  Share2,
   Calendar,
   Building,
   Scale,
   Check,
   Search,
-  Filter,
   Layers,
-  ChevronDown,
-  Info,
 } from 'lucide-react';
-import { ContractAudit, ClauseCategory, RiskSeverity, AuditedClause } from '../types/audit';
+import { ContractAudit } from '../types/audit';
 
 interface AuditResultViewProps {
   audit: ContractAudit;
@@ -35,7 +31,6 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
   onBack,
   onExportPDF,
   onExportWord,
-  onAddToCalendar,
 }) => {
   const [clauseFilter, setClauseFilter] = useState<'all' | 'issues' | 'compliant'>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -95,48 +90,52 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
   return (
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-200">
       {/* Top Navigation & Action Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-slate-200">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-4 border-b border-black/[0.04] dark:border-white/[0.06]">
         <div className="flex items-center gap-3">
           <button
+            type="button"
             onClick={onBack}
-            className="p-2 rounded-xl text-slate-500 hover:text-[#0F2744] hover:bg-slate-100 transition-colors cursor-pointer"
-            title="Volver"
+            className="p-2 rounded-full text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] transition-colors cursor-pointer"
+            title="Volver al Historial"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-400">Informe de Auditoría</span>
-              <span className="text-slate-300">•</span>
-              <span className="text-xs font-bold text-[#1E3E62]">{audit.documentType}</span>
+              <span className="text-[11px] font-medium text-[#0071e3] bg-blue-50 dark:bg-blue-950/40 px-2.5 py-0.5 rounded-full">
+                {audit.documentType || 'Mercantil'}
+              </span>
+              <span className="text-xs text-[#86868b]">
+                Auditado el {audit.auditDate}
+              </span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-[#0F2744] tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] tracking-tight mt-1">
               {audit.contractTitle}
             </h1>
           </div>
         </div>
 
-        {/* Action Buttons: Export to Word / Export to PDF / Print */}
+        {/* Action Buttons (Apple Pill Buttons) */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Export to Word (.docx) */}
+          {/* Export to Word */}
           <button
             type="button"
             onClick={handleWordExport}
             disabled={isExportingWord}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-[#1E3E62] bg-blue-50 hover:bg-blue-100 border border-blue-200/80 transition-all cursor-pointer shadow-2xs"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium text-[#1d1d1f] dark:text-[#f5f5f7] bg-white dark:bg-[#1c1c1e] hover:bg-black/[0.04] dark:hover:bg-[#2c2c2e] border border-black/[0.06] dark:border-white/[0.08] transition-all cursor-pointer shadow-xs"
           >
-            <FileText className="w-4 h-4 text-blue-700" />
-            <span>{isExportingWord ? 'Generando Word...' : 'Exportar Word (.docx)'}</span>
+            <FileText className="w-4 h-4 text-[#0071e3]" />
+            <span>{isExportingWord ? 'Generando Word...' : 'Exportar Word'}</span>
           </button>
 
-          {/* Export to PDF (.pdf) */}
+          {/* Export to PDF */}
           <button
             type="button"
             onClick={handlePDFExport}
             disabled={isExportingPDF}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/80 transition-all cursor-pointer shadow-2xs"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium text-white bg-[#0071e3] hover:bg-[#0077ed] active:scale-[0.98] transition-all cursor-pointer shadow-xs"
           >
-            <Download className="w-4 h-4 text-rose-600" />
+            <Download className="w-4 h-4 text-white" />
             <span>{isExportingPDF ? 'Generando PDF...' : 'Exportar PDF'}</span>
           </button>
 
@@ -144,7 +143,7 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
           <button
             type="button"
             onClick={handlePrint}
-            className="p-2 rounded-xl text-slate-600 hover:text-[#0F2744] hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
+            className="p-2 rounded-full text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] transition-colors cursor-pointer"
             title="Imprimir Informe de Auditoría"
           >
             <Printer className="w-4 h-4" />
@@ -153,36 +152,36 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
       </div>
 
       {/* Main Scorecard / KPI Summary Banner */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl p-6 sm:p-8 border border-black/[0.04] dark:border-white/[0.06] shadow-xs">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           {/* Metric 1: Overall Risk Score */}
-          <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-100 flex flex-col justify-between">
-            <span className="text-xs font-semibold text-slate-500">Índice Global de Riesgo</span>
+          <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] flex flex-col justify-between">
+            <span className="text-xs font-medium text-[#86868b]">Índice Global de Riesgo</span>
             <div className="flex items-baseline justify-between mt-2">
               <span
-                className={`text-3xl sm:text-4xl font-black ${
-                  isRiskHigh ? 'text-rose-600' : isRiskMedium ? 'text-amber-600' : 'text-emerald-600'
+                className={`text-3xl sm:text-4xl font-semibold tracking-tight ${
+                  isRiskHigh ? 'text-[#ff3b30]' : isRiskMedium ? 'text-[#ff9500]' : 'text-[#34c759]'
                 }`}
               >
                 {audit.overallRiskScore}
-                <span className="text-sm font-bold text-slate-400">/100</span>
+                <span className="text-sm font-normal text-[#86868b]">/100</span>
               </span>
               <span
-                className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
                   isRiskHigh
-                    ? 'bg-rose-100 text-rose-700'
+                    ? 'bg-red-50 dark:bg-red-950/50 text-[#ff3b30]'
                     : isRiskMedium
-                    ? 'bg-amber-100 text-amber-700'
-                    : 'bg-emerald-100 text-emerald-700'
+                    ? 'bg-amber-50 dark:bg-amber-950/50 text-[#ff9500]'
+                    : 'bg-emerald-50 dark:bg-emerald-950/50 text-[#34c759]'
                 }`}
               >
                 {isRiskHigh ? 'Riesgo Crítico' : isRiskMedium ? 'Riesgo Moderado' : 'Riesgo Bajo'}
               </span>
             </div>
-            <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden mt-3">
+            <div className="w-full bg-black/[0.04] dark:bg-white/[0.08] h-1.5 rounded-full overflow-hidden mt-3">
               <div
                 className={`h-full rounded-full ${
-                  isRiskHigh ? 'bg-rose-500' : isRiskMedium ? 'bg-amber-500' : 'bg-emerald-500'
+                  isRiskHigh ? 'bg-[#ff3b30]' : isRiskMedium ? 'bg-[#ff9500]' : 'bg-[#34c759]'
                 }`}
                 style={{ width: `${audit.overallRiskScore}%` }}
               />
@@ -190,58 +189,58 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
           </div>
 
           {/* Metric 2: Compliance Score */}
-          <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-100 flex flex-col justify-between">
-            <span className="text-xs font-semibold text-slate-500">Cumplimiento Normativo</span>
+          <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] flex flex-col justify-between">
+            <span className="text-xs font-medium text-[#86868b]">Cumplimiento Normativo</span>
             <div className="flex items-baseline justify-between mt-2">
-              <span className="text-3xl sm:text-4xl font-black text-[#0F2744]">
+              <span className="text-3xl sm:text-4xl font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
                 {audit.complianceScore}%
               </span>
-              <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 dark:bg-emerald-950/50 text-[#34c759]">
                 {audit.complianceScore >= 80 ? 'Conforme' : 'Observado'}
               </span>
             </div>
-            <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden mt-3">
+            <div className="w-full bg-black/[0.04] dark:bg-white/[0.08] h-1.5 rounded-full overflow-hidden mt-3">
               <div
-                className="h-full bg-emerald-500 rounded-full"
+                className="h-full bg-[#34c759] rounded-full"
                 style={{ width: `${audit.complianceScore}%` }}
               />
             </div>
           </div>
 
           {/* Metric 3: Vigencia & Vencimiento */}
-          <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-100 flex flex-col justify-between">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
-              <Calendar className="w-3.5 h-3.5 text-slate-400" />
+          <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] flex flex-col justify-between">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-[#86868b]">
+              <Calendar className="w-3.5 h-3.5 text-[#86868b]" />
               <span>Vigencia & Plazo</span>
             </div>
             <div className="mt-2 space-y-1">
-              <p className="text-xs text-slate-600">
-                <span className="font-semibold text-slate-400">Inicio:</span> {audit.effectiveDate}
+              <p className="text-xs text-[#1d1d1f] dark:text-[#f5f5f7]">
+                <span className="text-[#86868b]">Inicio:</span> {audit.effectiveDate}
               </p>
-              <p className="text-xs font-bold text-rose-600">
-                <span className="font-semibold text-slate-400">Vencimiento:</span> {audit.expirationDate}
+              <p className="text-xs font-medium text-[#ff3b30]">
+                <span className="text-[#86868b]">Vencimiento:</span> {audit.expirationDate}
               </p>
             </div>
-            <p className="text-[11px] text-slate-400 truncate mt-2">
+            <p className="text-[11px] text-[#86868b] truncate mt-2">
               {audit.renewalTerms || 'Renovación automática sujeta a notificación'}
             </p>
           </div>
 
           {/* Metric 4: Valor & Jurisdicción */}
-          <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-100 flex flex-col justify-between">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
-              <Scale className="w-3.5 h-3.5 text-slate-400" />
+          <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] flex flex-col justify-between">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-[#86868b]">
+              <Scale className="w-3.5 h-3.5 text-[#86868b]" />
               <span>Valor & Ley Aplicable</span>
             </div>
             <div className="mt-2 space-y-1">
-              <p className="text-sm font-extrabold text-[#0F2744] truncate">
+              <p className="text-sm font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] truncate">
                 {audit.totalValue || 'Sin contraprestación fija'}
               </p>
-              <p className="text-xs text-slate-500 truncate">
+              <p className="text-xs text-[#86868b] truncate">
                 {audit.governingLaw || 'Jurisdicción del fuero general'}
               </p>
             </div>
-            <span className="text-[11px] font-semibold text-slate-400">
+            <span className="text-[11px] text-[#86868b]">
               Auditor: {audit.auditedBy || 'Audiflow Senior'}
             </span>
           </div>
@@ -249,16 +248,16 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
 
         {/* Contracting Parties Chips */}
         {audit.parties && audit.parties.length > 0 && (
-          <div className="mt-5 pt-4 border-t border-slate-100 flex flex-wrap items-center gap-2">
-            <span className="text-xs font-bold text-slate-500 mr-2">Partes Intervinientes:</span>
+          <div className="mt-5 pt-4 border-t border-black/[0.04] dark:border-white/[0.06] flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-[#86868b] mr-2">Partes Intervinientes:</span>
             {audit.parties.map((party, idx) => (
               <div
                 key={idx}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 text-xs font-semibold text-slate-700"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/[0.03] dark:bg-white/[0.06] text-xs font-medium text-[#1d1d1f] dark:text-[#f5f5f7]"
               >
-                <Building className="w-3 h-3 text-slate-400" />
+                <Building className="w-3 h-3 text-[#86868b]" />
                 <span>{party.name}</span>
-                <span className="text-[10px] text-slate-400 font-normal">({party.role})</span>
+                <span className="text-[10px] text-[#86868b]">({party.role})</span>
               </div>
             ))}
           </div>
@@ -266,34 +265,34 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
       </div>
 
       {/* Executive Summary Card */}
-      <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-xs">
-        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#1E3E62] mb-2">
-          <Sparkles className="w-4 h-4 text-blue-600" />
+      <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl p-6 sm:p-7 border border-black/[0.04] dark:border-white/[0.06] shadow-xs">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#0071e3] dark:text-[#2997ff] mb-2">
+          <Sparkles className="w-4 h-4 text-[#0071e3]" />
           <span>Dictamen y Resumen Ejecutivo</span>
         </div>
-        <p className="text-slate-700 text-sm sm:text-base leading-relaxed">
+        <p className="text-[#1d1d1f] dark:text-[#f5f5f7] text-sm sm:text-base leading-relaxed">
           {audit.summary}
         </p>
       </div>
 
       {/* Urgent Deadlines Notification Banner */}
       {audit.keyDeadlines && audit.keyDeadlines.length > 0 && (
-        <div className="bg-gradient-to-r from-rose-50/80 via-white to-amber-50/80 rounded-3xl p-6 border border-rose-200/80 shadow-xs">
+        <div className="bg-red-50/40 dark:bg-red-950/20 rounded-3xl p-6 border border-red-200/60 dark:border-red-900/40 shadow-xs">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-rose-100 text-rose-700">
+              <div className="p-2 rounded-full bg-red-100 dark:bg-red-950/60 text-[#ff3b30]">
                 <Clock className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-[#0F2744]">
+                <h3 className="text-sm font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
                   Alertas de Vencimiento y Fechas Límite
                 </h3>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-[#86868b]">
                   Hitos críticos extraídos para evitar renovaciones forzosas o penalizaciones.
                 </p>
               </div>
             </div>
-            <span className="text-xs font-extrabold text-rose-700 bg-rose-100 px-3 py-1 rounded-full animate-pulse self-start sm:self-auto">
+            <span className="text-xs font-medium text-[#ff3b30] bg-red-100 dark:bg-red-950/60 px-3 py-1 rounded-full self-start sm:self-auto">
               {audit.keyDeadlines.length} Plazos Clave Detectados
             </span>
           </div>
@@ -302,17 +301,15 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
             {audit.keyDeadlines.map((dl, idx) => (
               <div
                 key={idx}
-                className={`p-4 rounded-2xl border bg-white shadow-2xs space-y-2 ${
-                  dl.urgency === 'urgent' ? 'border-rose-200' : 'border-amber-200'
-                }`}
+                className="p-4 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-black/[0.04] dark:border-white/[0.06] shadow-xs space-y-2"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold text-[#0F2744]">{dl.date}</span>
+                  <span className="text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">{dl.date}</span>
                   <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
                       dl.urgency === 'urgent'
-                        ? 'bg-rose-100 text-rose-700'
-                        : 'bg-amber-100 text-amber-800'
+                        ? 'bg-red-50 dark:bg-red-950/50 text-[#ff3b30]'
+                        : 'bg-amber-50 dark:bg-amber-950/50 text-[#ff9500]'
                     }`}
                   >
                     {dl.daysRemaining !== undefined
@@ -322,8 +319,8 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
                       : 'Hito fijado'}
                   </span>
                 </div>
-                <h4 className="text-xs font-bold text-slate-800">{dl.title}</h4>
-                <p className="text-[11px] text-slate-500 leading-snug">{dl.description}</p>
+                <h4 className="text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">{dl.title}</h4>
+                <p className="text-[11px] text-[#86868b] leading-snug">{dl.description}</p>
               </div>
             ))}
           </div>
@@ -332,43 +329,43 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
 
       {/* Tabs: Cláusulas vs Riesgos vs Omisiones */}
       <div className="space-y-4">
-        <div className="flex border-b border-slate-200">
+        <div className="flex bg-black/[0.04] dark:bg-white/[0.08] p-1 rounded-full self-start inline-flex">
           <button
             type="button"
             onClick={() => setActiveTab('clauses')}
-            className={`pb-3 px-4 text-xs sm:text-sm font-bold border-b-2 transition-colors cursor-pointer flex items-center gap-2 ${
+            className={`py-1.5 px-4 text-xs font-medium rounded-full transition-all cursor-pointer flex items-center gap-2 ${
               activeTab === 'clauses'
-                ? 'border-[#0F2744] text-[#0F2744]'
-                : 'border-transparent text-slate-400 hover:text-slate-700'
+                ? 'bg-white dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-white shadow-xs'
+                : 'text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]'
             }`}
           >
-            <Layers className="w-4 h-4" />
+            <Layers className="w-3.5 h-3.5" />
             <span>Auditoría de Cláusulas ({audit.clauses.length})</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('risks')}
-            className={`pb-3 px-4 text-xs sm:text-sm font-bold border-b-2 transition-colors cursor-pointer flex items-center gap-2 ${
+            className={`py-1.5 px-4 text-xs font-medium rounded-full transition-all cursor-pointer flex items-center gap-2 ${
               activeTab === 'risks'
-                ? 'border-[#0F2744] text-[#0F2744]'
-                : 'border-transparent text-slate-400 hover:text-slate-700'
+                ? 'bg-white dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-white shadow-xs'
+                : 'text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]'
             }`}
           >
-            <AlertTriangle className="w-4 h-4" />
+            <AlertTriangle className="w-3.5 h-3.5" />
             <span>Matriz de Riesgos ({audit.risksIdentified.length})</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('missing')}
-            className={`pb-3 px-4 text-xs sm:text-sm font-bold border-b-2 transition-colors cursor-pointer flex items-center gap-2 ${
+            className={`py-1.5 px-4 text-xs font-medium rounded-full transition-all cursor-pointer flex items-center gap-2 ${
               activeTab === 'missing'
-                ? 'border-[#0F2744] text-[#0F2744]'
-                : 'border-transparent text-slate-400 hover:text-slate-700'
+                ? 'bg-white dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-white shadow-xs'
+                : 'text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]'
             }`}
           >
-            <ShieldAlert className="w-4 h-4" />
+            <ShieldAlert className="w-3.5 h-3.5" />
             <span>Cláusulas Faltantes ({audit.missingEssentialClauses.length})</span>
           </button>
         </div>
@@ -377,16 +374,16 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
         {activeTab === 'clauses' && (
           <div className="space-y-4">
             {/* Filters Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white dark:bg-[#1c1c1e] p-3 rounded-2xl border border-black/[0.04] dark:border-white/[0.06] shadow-xs">
               {/* Status Pill Switcher */}
-              <div className="flex bg-slate-100 p-1 rounded-xl">
+              <div className="flex bg-black/[0.04] dark:bg-white/[0.08] p-1 rounded-full">
                 <button
                   type="button"
                   onClick={() => setClauseFilter('all')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer ${
                     clauseFilter === 'all'
-                      ? 'bg-white text-[#0F2744] shadow-xs'
-                      : 'text-slate-500 hover:text-slate-800'
+                      ? 'bg-white dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-[#f5f5f7] shadow-xs'
+                      : 'text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]'
                   }`}
                 >
                   Todas ({audit.clauses.length})
@@ -394,10 +391,10 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setClauseFilter('issues')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer ${
                     clauseFilter === 'issues'
-                      ? 'bg-white text-rose-700 shadow-xs'
-                      : 'text-slate-500 hover:text-slate-800'
+                      ? 'bg-white dark:bg-[#2c2c2e] text-[#ff3b30] shadow-xs'
+                      : 'text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]'
                   }`}
                 >
                   Con Riesgo ({audit.clauses.filter((c) => !c.compliant).length})
@@ -405,10 +402,10 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setClauseFilter('compliant')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer ${
                     clauseFilter === 'compliant'
-                      ? 'bg-white text-emerald-700 shadow-xs'
-                      : 'text-slate-500 hover:text-slate-800'
+                      ? 'bg-white dark:bg-[#2c2c2e] text-[#34c759] shadow-xs'
+                      : 'text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]'
                   }`}
                 >
                   Conformes ({audit.clauses.filter((c) => c.compliant).length})
@@ -417,20 +414,20 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
 
               {/* Search Bar */}
               <div className="relative flex-1 max-w-xs">
-                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#86868b]" />
                 <input
                   type="text"
                   placeholder="Buscar en cláusulas o recomendaciones..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-1 focus:ring-[#0F2744] bg-slate-50/50"
+                  className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-black/[0.06] dark:border-white/[0.08] focus:outline-none focus:border-[#0071e3] bg-black/[0.02] dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-[#f5f5f7]"
                 />
               </div>
             </div>
 
             {/* Clauses List */}
             {filteredClauses.length === 0 ? (
-              <div className="bg-white rounded-3xl p-10 text-center border border-slate-200 text-slate-400">
+              <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl p-10 text-center border border-black/[0.04] dark:border-white/[0.06] text-[#86868b]">
                 No se encontraron cláusulas con los criterios seleccionados.
               </div>
             ) : (
@@ -440,17 +437,19 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
                   return (
                     <div
                       key={clause.id || idx}
-                      className={`bg-white rounded-3xl p-6 border transition-all ${
-                        isIssue ? 'border-rose-200/90 shadow-2xs' : 'border-slate-200/90'
+                      className={`bg-white dark:bg-[#1c1c1e] rounded-3xl p-6 border transition-all ${
+                        isIssue
+                          ? 'border-red-200/80 dark:border-red-900/60 shadow-2xs'
+                          : 'border-black/[0.04] dark:border-white/[0.06]'
                       }`}
                     >
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-slate-100">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-black/[0.04] dark:border-white/[0.06]">
                         <div className="flex items-center gap-2.5">
                           <span
-                            className={`p-1.5 rounded-lg ${
+                            className={`p-1.5 rounded-full ${
                               clause.compliant
-                                ? 'bg-emerald-100 text-emerald-700'
-                                : 'bg-rose-100 text-rose-700'
+                                ? 'bg-emerald-50 dark:bg-emerald-950/60 text-[#34c759]'
+                                : 'bg-red-50 dark:bg-red-950/60 text-[#ff3b30]'
                             }`}
                           >
                             {clause.compliant ? (
@@ -460,10 +459,10 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
                             )}
                           </span>
                           <div>
-                            <h3 className="text-sm font-extrabold text-[#0F2744]">
+                            <h3 className="text-sm font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
                               {clause.title}
                             </h3>
-                            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                            <span className="text-[10px] font-medium text-[#86868b] uppercase tracking-wider">
                               Categoría: {clause.category.replace('_', ' ')}
                             </span>
                           </div>
@@ -471,23 +470,23 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
 
                         <div className="flex items-center gap-2">
                           <span
-                            className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                            className={`px-2.5 py-0.5 rounded-full text-xs font-medium uppercase tracking-wider ${
                               clause.riskLevel === 'critical'
-                                ? 'bg-rose-600 text-white'
+                                ? 'bg-[#ff3b30] text-white'
                                 : clause.riskLevel === 'high'
-                                ? 'bg-rose-100 text-rose-700'
+                                ? 'bg-red-50 dark:bg-red-950/60 text-[#ff3b30]'
                                 : clause.riskLevel === 'medium'
-                                ? 'bg-amber-100 text-amber-800'
-                                : 'bg-emerald-100 text-emerald-800'
+                                ? 'bg-amber-50 dark:bg-amber-950/60 text-[#ff9500]'
+                                : 'bg-emerald-50 dark:bg-emerald-950/60 text-[#34c759]'
                             }`}
                           >
                             Riesgo {clause.riskLevel}
                           </span>
                           <span
-                            className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${
+                            className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
                               clause.compliant
-                                ? 'text-emerald-700 bg-emerald-50'
-                                : 'text-rose-700 bg-rose-50'
+                                ? 'text-[#34c759] bg-emerald-50 dark:bg-emerald-950/60'
+                                : 'text-[#ff3b30] bg-red-50 dark:bg-red-950/60'
                             }`}
                           >
                             {clause.compliant ? 'Conforme' : 'Requiere Enmienda'}
@@ -496,26 +495,26 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
                       </div>
 
                       {/* Snippet */}
-                      <div className="mt-4 p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs font-mono text-slate-600 italic">
+                      <div className="mt-4 p-3 rounded-xl bg-black/[0.02] dark:bg-black/40 border border-black/[0.04] dark:border-white/[0.06] text-xs font-mono text-[#1d1d1f] dark:text-[#f5f5f7] italic">
                         "{clause.originalSnippet}"
                       </div>
 
                       {/* Findings & Recommendations */}
                       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                        <div className="p-3.5 rounded-xl bg-rose-50/50 border border-rose-100 space-y-1">
-                          <div className="flex items-center gap-1.5 font-bold text-rose-900">
-                            <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
+                        <div className="p-3.5 rounded-xl bg-red-50/40 dark:bg-red-950/30 border border-red-200/50 dark:border-red-900/40 space-y-1">
+                          <div className="flex items-center gap-1.5 font-semibold text-[#ff3b30]">
+                            <ShieldAlert className="w-3.5 h-3.5 text-[#ff3b30]" />
                             <span>Hallazgo Jurídico</span>
                           </div>
-                          <p className="text-slate-700 leading-relaxed">{clause.finding}</p>
+                          <p className="text-[#1d1d1f] dark:text-[#f5f5f7] leading-relaxed">{clause.finding}</p>
                         </div>
 
-                        <div className="p-3.5 rounded-xl bg-blue-50/50 border border-blue-100 space-y-1">
-                          <div className="flex items-center gap-1.5 font-bold text-[#1E3E62]">
-                            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                        <div className="p-3.5 rounded-xl bg-blue-50/40 dark:bg-blue-950/30 border border-blue-200/50 dark:border-blue-900/40 space-y-1">
+                          <div className="flex items-center gap-1.5 font-semibold text-[#0071e3] dark:text-[#2997ff]">
+                            <Sparkles className="w-3.5 h-3.5 text-[#0071e3]" />
                             <span>Recomendación de Redacción / Enmienda</span>
                           </div>
-                          <p className="text-slate-700 leading-relaxed">
+                          <p className="text-[#1d1d1f] dark:text-[#f5f5f7] leading-relaxed">
                             {clause.recommendation}
                           </p>
                         </div>
@@ -534,33 +533,33 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
             {audit.risksIdentified.map((risk, idx) => (
               <div
                 key={idx}
-                className="bg-white rounded-3xl p-6 border border-slate-200 shadow-2xs space-y-3"
+                className="bg-white dark:bg-[#1c1c1e] rounded-3xl p-6 border border-black/[0.04] dark:border-white/[0.06] shadow-xs space-y-3"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-pulse" />
-                    <h3 className="text-sm font-extrabold text-[#0F2744]">{risk.title}</h3>
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#ff3b30]" />
+                    <h3 className="text-sm font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">{risk.title}</h3>
                   </div>
                   <span
-                    className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold uppercase ${
+                    className={`px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase ${
                       risk.severity === 'critical'
-                        ? 'bg-rose-600 text-white'
+                        ? 'bg-[#ff3b30] text-white'
                         : risk.severity === 'high'
-                        ? 'bg-rose-100 text-rose-700'
-                        : 'bg-amber-100 text-amber-800'
+                        ? 'bg-red-50 dark:bg-red-950/60 text-[#ff3b30]'
+                        : 'bg-amber-50 dark:bg-amber-950/60 text-[#ff9500]'
                     }`}
                   >
                     Severidad: {risk.severity}
                   </span>
                 </div>
-                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                <p className="text-xs sm:text-sm text-[#86868b] leading-relaxed">
                   {risk.description}
                 </p>
-                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100 flex items-start gap-2 text-xs">
-                  <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <div className="p-3 rounded-xl bg-emerald-50/40 dark:bg-emerald-950/30 border border-emerald-200/50 dark:border-emerald-900/40 flex items-start gap-2 text-xs">
+                  <Check className="w-4 h-4 text-[#34c759] shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-bold text-emerald-950">Medida Preventiva / Mitigación: </span>
-                    <span className="text-emerald-900">{risk.mitigation}</span>
+                    <span className="font-semibold text-emerald-900 dark:text-emerald-300">Medida Preventiva / Mitigación: </span>
+                    <span className="text-emerald-800 dark:text-emerald-200">{risk.mitigation}</span>
                   </div>
                 </div>
               </div>
@@ -570,26 +569,26 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
 
         {/* Tab 3: Cláusulas Faltantes */}
         {activeTab === 'missing' && (
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-4">
+          <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl p-6 sm:p-8 border border-black/[0.04] dark:border-white/[0.06] shadow-xs space-y-4">
             <div>
-              <h3 className="text-base font-bold text-[#0F2744]">
+              <h3 className="text-base font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
                 Cláusulas Esenciales Recomendadas que Faltan
               </h3>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-[#86868b] mt-1">
                 La ausencia de estas salvaguardas legales expone a la organización a contingencias no
                 reguladas. Se sugiere incorporarlas formalmente antes de la firma.
               </p>
             </div>
 
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-black/[0.04] dark:divide-white/[0.06]">
               {audit.missingEssentialClauses.map((item, idx) => (
                 <div key={idx} className="py-3.5 flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 text-xs font-bold mt-0.5">
+                  <div className="w-6 h-6 rounded-full bg-amber-50 dark:bg-amber-950/60 text-[#ff9500] flex items-center justify-center shrink-0 text-xs font-semibold mt-0.5">
                     {idx + 1}
                   </div>
                   <div className="flex-1">
-                    <p className="text-xs sm:text-sm font-bold text-slate-800">{item}</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
+                    <p className="text-xs sm:text-sm font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">{item}</p>
+                    <p className="text-[11px] text-[#86868b] mt-0.5">
                       Requerido según las mejores prácticas de gobernanza y control de contratos corporativos.
                     </p>
                   </div>
