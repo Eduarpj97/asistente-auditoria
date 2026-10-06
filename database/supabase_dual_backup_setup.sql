@@ -30,6 +30,8 @@ ALTER TABLE public.texto_ocr DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.clausulas_extraidas DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.analisis_riesgos DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.auditorias_sync DISABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Permitir todo en auditorias_sync" ON public.auditorias_sync;
+CREATE POLICY "Permitir todo en auditorias_sync" ON public.auditorias_sync FOR ALL TO anon, authenticated, service_role USING (true) WITH CHECK (true);
 
 -- 5. Otorgar permisos al rol anon y authenticated para acceso completo del backend
 GRANT ALL ON TABLE public.empresas TO anon, authenticated, service_role;
