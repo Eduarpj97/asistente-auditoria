@@ -19,10 +19,17 @@ DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 os.makedirs(DATA_DIR, exist_ok=True)
 SQLITE_DB_PATH = os.path.join(DATA_DIR, "audiflow_local.db")
 
+def get_sqlite_conn() -> sqlite3.Connection:
+    """Retorna una conexión a SQLite con modo WAL y timeout de 30s para concurrencia multi-usuario sin bloqueos."""
+    conn = sqlite3.connect(SQLITE_DB_PATH, timeout=30.0)
+    conn.execute("PRAGMA journal_mode=WAL;")
+    conn.execute("PRAGMA synchronous=NORMAL;")
+    return conn
+
 def init_sqlite_db():
     """Inicializa las tablas locales en SQLite compatibles con el esquema de Audiflow."""
     try:
-        conn = sqlite3.connect(SQLITE_DB_PATH)
+        conn = get_sqlite_conn()
         c = conn.cursor()
         c.execute("""
         CREATE TABLE IF NOT EXISTS documentos (
@@ -118,7 +125,7 @@ def db_register_user(name: str, email: str, password: str, company: str = "Firma
     user_id = str(uuid.uuid4())
     
     try:
-        conn = sqlite3.connect(SQLITE_DB_PATH)
+        conn = get_sqlite_conn()
         c = conn.cursor()
         c.execute("SELECT id_usuario FROM usuarios WHERE LOWER(email) = ?", (norm_email,))
         existing = c.fetchone()
@@ -151,7 +158,7 @@ def db_authenticate_user(email: str, password: str) -> Dict[str, Any]:
     pwd_hash = hash_password(password)
     
     try:
-        conn = sqlite3.connect(SQLITE_DB_PATH)
+        conn = get_sqlite_conn()
         c = conn.cursor()
         c.execute("SELECT id_usuario, nombre, email, password_hash, empresa, rol, activo FROM usuarios WHERE LOWER(email) = ?", (norm_email,))
         row = c.fetchone()
@@ -197,7 +204,7 @@ def db_save_audit_sync(user_email: str, audit_id: str, audit_json: str) -> Dict[
     """Guarda el JSON completo de una auditoría vinculada al email del usuario para sincronización cross-device."""
     norm_email = user_email.strip().lower()
     try:
-        conn = sqlite3.connect(SQLITE_DB_PATH)
+        conn = get_sqlite_conn()
         c = conn.cursor()
         c.execute("""
         INSERT OR REPLACE INTO auditorias_sync (id_audit, user_email, audit_json)
@@ -215,7 +222,7 @@ def db_get_user_audits(user_email: str) -> list:
     import json
     norm_email = user_email.strip().lower()
     try:
-        conn = sqlite3.connect(SQLITE_DB_PATH)
+        conn = get_sqlite_conn()
         c = conn.cursor()
         rows = c.execute(
             "SELECT audit_json FROM auditorias_sync WHERE user_email = ? ORDER BY created_at DESC",
@@ -238,7 +245,7 @@ def db_delete_audit_sync(user_email: str, audit_id: str) -> Dict[str, Any]:
     """Elimina una auditoría sincronizada de un usuario."""
     norm_email = user_email.strip().lower()
     try:
-        conn = sqlite3.connect(SQLITE_DB_PATH)
+        conn = get_sqlite_conn()
         c = conn.cursor()
         c.execute("DELETE FROM auditorias_sync WHERE id_audit = ? AND user_email = ?", (audit_id, norm_email))
         conn.commit()

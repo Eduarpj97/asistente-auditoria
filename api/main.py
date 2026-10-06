@@ -1,4 +1,6 @@
 import os
+import json
+import asyncio
 import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
@@ -76,7 +78,8 @@ async def register_endpoint(req: RegisterRequest):
     Registra una cuenta de usuario en la base de datos central.
     Garantiza que la cuenta pueda ser utilizada desde cualquier dispositivo (PC, móvil, tablet).
     """
-    res = db_register_user(
+    res = await asyncio.to_thread(
+        db_register_user,
         name=req.name,
         email=req.email,
         password=req.password,
@@ -93,7 +96,7 @@ async def login_endpoint(req: LoginRequest):
     Autentica credenciales contra la base de datos central.
     Permite el inicio de sesión multidispositivo sin importar el navegador o terminal.
     """
-    res = db_authenticate_user(email=req.email, password=req.password)
+    res = await asyncio.to_thread(db_authenticate_user, email=req.email, password=req.password)
     if not res.get("success"):
         raise HTTPException(status_code=401, detail=res.get("error", "Credenciales incorrectas."))
     return res
@@ -108,15 +111,12 @@ async def sync_audit(payload: dict):
     """
     user_email = payload.get("user_email", "").strip().lower()
     audit_id = payload.get("audit_id", "")
-    audit_json_str = ""
-    
-    import json
     audit_data = payload.get("audit_data")
     if not user_email or not audit_id or not audit_data:
         raise HTTPException(status_code=400, detail="Faltan campos requeridos: user_email, audit_id, audit_data.")
     
     audit_json_str = json.dumps(audit_data, ensure_ascii=False)
-    result = db_save_audit_sync(user_email, audit_id, audit_json_str)
+    result = await asyncio.to_thread(db_save_audit_sync, user_email, audit_id, audit_json_str)
     if not result.get("success"):
         raise HTTPException(status_code=500, detail=result.get("error", "Error al guardar auditoría."))
     return {"success": True, "audit_id": audit_id}
@@ -127,16 +127,34 @@ async def get_user_audits(email: str):
     Recupera todas las auditorías almacenadas para un usuario por su email.
     Se invoca al iniciar sesión para cargar el historial en cualquier dispositivo.
     """
-    audits = db_get_user_audits(email)
+    audits = await asyncio.to_thread(db_get_user_audits, email)
     return {"success": True, "audits": audits, "total": len(audits)}
 
 @app.delete("/v1/audits/sync/{audit_id}", summary="Eliminar auditoría sincronizada")
 async def delete_synced_audit(audit_id: str, email: str):
     """Elimina una auditoría sincronizada de un usuario."""
-    result = db_delete_audit_sync(email, audit_id)
+    result = await asyncio.to_thread(db_delete_audit_sync, email, audit_id)
     if not result.get("success"):
         raise HTTPException(status_code=500, detail=result.get("error", "Error al eliminar auditoría."))
     return {"success": True}
+
+def _process_pdf_sync(pdf_bytes: bytes, filename: str, chunk_size: int, chunk_overlap: int, calculate_risk: bool) -> ProcessingResponse:
+    raw_text = extract_text_hybrid(pdf_bytes)
+    if not raw_text.strip():
+        raise ValueError("No se pudo extraer contenido del archivo.")
+
+    chunks = create_chunks(raw_text, chunk_size, chunk_overlap)
+    risk_assessment = None
+    if calculate_risk:
+        risk_assessment = risk_engine.assess_risk(chunks)
+
+    return ProcessingResponse(
+        filename=filename,
+        total_characters=len(raw_text),
+        total_chunks=len(chunks),
+        chunks=chunks,
+        risk_assessment=risk_assessment
+    )
 
 @app.post("/v1/process-pdf", response_model=ProcessingResponse, summary="Procesar PDF y evaluar riesgos normativos")
 async def process_pdf(
@@ -149,24 +167,48 @@ async def process_pdf(
         raise HTTPException(status_code=400, detail="Formato no soportado. Debe ser un PDF.")
 
     pdf_bytes = await file.read()
+    try:
+        return await asyncio.to_thread(
+            _process_pdf_sync, pdf_bytes, file.filename, chunk_size, chunk_overlap, calculate_risk
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=422, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al procesar el archivo: {str(e)}")
+
+def _process_audit_pipeline(pdf_bytes: bytes, filename: str, use_llm: bool) -> dict:
+    """Ejecuta el pipeline completo de auditoría de forma síncrona en un worker thread."""
     raw_text = extract_text_hybrid(pdf_bytes)
-    
     if not raw_text.strip():
-        raise HTTPException(status_code=422, detail="No se pudo extraer contenido del archivo.")
+        raise ValueError("No se pudo extraer contenido del archivo.")
 
-    chunks = create_chunks(raw_text, chunk_size, chunk_overlap)
+    # 1. Reglas normativas determinísticas
+    chunks = create_chunks(raw_text, chunk_size=500, chunk_overlap=50)
+    rule_assessment = risk_engine.assess_risk(chunks)
 
-    risk_assessment = None
-    if calculate_risk:
-        risk_assessment = risk_engine.assess_risk(chunks)
+    # 2. Inferencia semántica con Llama 3.1 en VPS
+    llm_assessment = None
+    if use_llm:
+        llm_assessment = llm_service.analyze_contract_semantics(raw_text)
 
-    return ProcessingResponse(
-        filename=file.filename,
-        total_characters=len(raw_text),
-        total_chunks=len(chunks),
+    # 3. Guardar automáticamente en SQLite / Supabase
+    db_result = db_service.save_audit(
+        filename=filename,
+        file_bytes=pdf_bytes,
+        raw_text=raw_text,
         chunks=chunks,
-        risk_assessment=risk_assessment
+        rule_assessment=rule_assessment,
+        llm_assessment=llm_assessment
     )
+
+    return {
+        "filename": filename,
+        "total_characters": len(raw_text),
+        "total_chunks": len(chunks),
+        "rule_scoring": rule_assessment,
+        "ai_llm_analysis": llm_assessment,
+        "database_persistence": db_result
+    }
 
 @app.post("/v1/audit-contract-ai", summary="Auditoría híbrida avanzada (Reglas Normativas + IA Llama 3.1 + Supabase)")
 async def audit_contract_ai(
@@ -179,43 +221,23 @@ async def audit_contract_ai(
     2. Ejecuta el motor de scoring de 14 reglas normativas (RGPD, AML, Anticorrupción, ISO 27001).
     3. Invoca a Llama 3.1 en la VPS de Oracle Cloud para extraer cláusulas críticas y recomendaciones.
     4. Persiste el documento, fragmentos OCR, cláusulas y riesgos en Supabase.
+    Se ejecuta de forma no bloqueante en un pool de hilos para no degradar el acceso de otros usuarios.
     """
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Formato no soportado. Debe ser un PDF.")
 
     pdf_bytes = await file.read()
-    raw_text = extract_text_hybrid(pdf_bytes)
+    if not pdf_bytes:
+        raise HTTPException(status_code=422, detail="No se pudo leer el archivo cargado.")
 
-    if not raw_text.strip():
-        raise HTTPException(status_code=422, detail="No se pudo extraer contenido del archivo.")
-
-    # 1. Reglas normativas determinísticas
-    chunks = create_chunks(raw_text, chunk_size=500, chunk_overlap=50)
-    rule_assessment = risk_engine.assess_risk(chunks)
-
-    # 2. Inferencia semántica con Llama 3.1 en VPS
-    llm_assessment = None
-    if use_llm:
-        llm_assessment = llm_service.analyze_contract_semantics(raw_text)
-
-    # 3. Guardar automáticamente en Supabase
-    db_result = db_service.save_audit(
-        filename=file.filename,
-        file_bytes=pdf_bytes,
-        raw_text=raw_text,
-        chunks=chunks,
-        rule_assessment=rule_assessment,
-        llm_assessment=llm_assessment
-    )
-
-    return {
-        "filename": file.filename,
-        "total_characters": len(raw_text),
-        "total_chunks": len(chunks),
-        "rule_scoring": rule_assessment,
-        "ai_llm_analysis": llm_assessment,
-        "database_persistence": db_result
-    }
+    try:
+        # Offload al threadpool para no congelar el bucle de eventos de FastAPI
+        result = await asyncio.to_thread(_process_audit_pipeline, pdf_bytes, file.filename, use_llm)
+        return result
+    except ValueError as ve:
+        raise HTTPException(status_code=422, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error durante la auditoría: {str(e)}")
 
 @app.get("/v1/contracts", summary="Listar contratos auditados guardados en Supabase")
 async def list_contracts(limit: int = 20):

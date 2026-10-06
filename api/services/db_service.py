@@ -2,7 +2,7 @@ import uuid
 import hashlib
 import sqlite3
 from typing import Dict, Any, List, Optional
-from database import supabase, SQLITE_DB_PATH
+from database import supabase, SQLITE_DB_PATH, get_sqlite_conn
 
 class DatabaseAuditService:
     """
@@ -25,7 +25,7 @@ class DatabaseAuditService:
     ) -> bool:
         """Guarda la auditoría en la base de datos local SQLite."""
         try:
-            conn = sqlite3.connect(SQLITE_DB_PATH)
+            conn = get_sqlite_conn()
             c = conn.cursor()
             c.execute("""
             INSERT OR REPLACE INTO documentos 
@@ -212,7 +212,7 @@ class DatabaseAuditService:
 
         # Fallback a SQLite
         try:
-            conn = sqlite3.connect(SQLITE_DB_PATH)
+            conn = get_sqlite_conn()
             conn.row_factory = sqlite3.Row
             c = conn.cursor()
             rows = c.execute("SELECT * FROM documentos ORDER BY fecha_carga DESC LIMIT ?", (limit,)).fetchall()
@@ -241,7 +241,7 @@ class DatabaseAuditService:
 
         # Fallback a SQLite
         try:
-            conn = sqlite3.connect(SQLITE_DB_PATH)
+            conn = get_sqlite_conn()
             conn.row_factory = sqlite3.Row
             c = conn.cursor()
             doc_row = c.execute("SELECT * FROM documentos WHERE id_documento = ?", (document_id,)).fetchone()
