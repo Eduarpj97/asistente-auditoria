@@ -43,11 +43,15 @@ export default function App() {
   // Active Navigation Tab
   const [currentTab, setCurrentTab] = useState<NavTab>('dashboard');
 
-  // Audits repository (100% reales, sin simulaciones ni datos de relleno)
+  // Audits repository (100% reales, aislado estrictamente por usuario)
   const [audits, setAudits] = useState<ContractAudit[]>(() => {
-    const saved = localStorage.getItem('audiflow_audits');
-    if (!saved) return [];
     try {
+      const savedUser = localStorage.getItem('audiflow_user') || sessionStorage.getItem('audiflow_user');
+      if (!savedUser) return [];
+      const user: User = JSON.parse(savedUser);
+      if (!user?.email) return [];
+      const saved = localStorage.getItem(`audiflow_audits_${user.email.toLowerCase()}`);
+      if (!saved) return [];
       const parsed: ContractAudit[] = JSON.parse(saved);
       return Array.isArray(parsed) ? parsed.filter((a) => !a.id.startsWith('aud-2026-00')) : [];
     } catch {
@@ -58,11 +62,15 @@ export default function App() {
   // Selected audit for detail inspection
   const [selectedAudit, setSelectedAudit] = useState<ContractAudit | null>(null);
 
-  // Key deadlines pool (derivado exclusivamente de auditorías reales)
+  // Key deadlines pool (aislado estrictamente por usuario)
   const [deadlines, setDeadlines] = useState<KeyDeadline[]>(() => {
-    const saved = localStorage.getItem('audiflow_deadlines');
-    if (!saved) return [];
     try {
+      const savedUser = localStorage.getItem('audiflow_user') || sessionStorage.getItem('audiflow_user');
+      if (!savedUser) return [];
+      const user: User = JSON.parse(savedUser);
+      if (!user?.email) return [];
+      const saved = localStorage.getItem(`audiflow_deadlines_${user.email.toLowerCase()}`);
+      if (!saved) return [];
       const parsed: KeyDeadline[] = JSON.parse(saved);
       return Array.isArray(parsed) ? parsed.filter((d) => !d.contractId?.startsWith('aud-2026-00')) : [];
     } catch {
@@ -80,22 +88,16 @@ export default function App() {
     }, 3500);
   };
 
-  // Sync to local storage
+  // Sync to local storage aislado por cuenta
   useEffect(() => {
     if (currentUser) {
       localStorage.setItem('audiflow_user', JSON.stringify(currentUser));
+      localStorage.setItem(`audiflow_audits_${currentUser.email.toLowerCase()}`, JSON.stringify(audits));
+      localStorage.setItem(`audiflow_deadlines_${currentUser.email.toLowerCase()}`, JSON.stringify(deadlines));
     } else {
       localStorage.removeItem('audiflow_user');
     }
-  }, [currentUser]);
-
-  useEffect(() => {
-    localStorage.setItem('audiflow_audits', JSON.stringify(audits));
-  }, [audits]);
-
-  useEffect(() => {
-    localStorage.setItem('audiflow_deadlines', JSON.stringify(deadlines));
-  }, [deadlines]);
+  }, [currentUser, audits, deadlines]);
 
   // Cierre de sesión automático por inactividad (15 minutos)
   useEffect(() => {
@@ -133,11 +135,10 @@ export default function App() {
     };
   }, [currentUser]);
 
-  // Referencias para control de concurrencia y migración inicial
-  const migrationAttemptedRef = useRef(false);
+  // Referencia para control de llamadas concurrentes
   const isRefreshingRef = useRef(false);
 
-  // Sincronización con el servidor central: El servidor es la fuente única de verdad
+  // Sincronización con el servidor central: El servidor es la fuente única de verdad para cada cuenta
   const refreshAudits = useCallback(async (targetEmail?: string) => {
     const email = targetEmail || currentUser?.email;
     if (!email || isRefreshingRef.current) return;
@@ -150,42 +151,7 @@ export default function App() {
         if (data.success && Array.isArray(data.audits)) {
           const serverAudits: ContractAudit[] = data.audits;
 
-          // Si el servidor está vacío pero el usuario tenía auditorías previas en este navegador,
-          // subirlas una única vez al servidor para preservarlas
-          if (serverAudits.length === 0 && !migrationAttemptedRef.current) {
-            migrationAttemptedRef.current = true;
-            const localSaved = localStorage.getItem('audiflow_audits');
-            if (localSaved) {
-              try {
-                const parsedLocal: ContractAudit[] = JSON.parse(localSaved);
-                if (Array.isArray(parsedLocal) && parsedLocal.length > 0) {
-                  for (const audit of parsedLocal) {
-                    await fetch(`${getApiBase()}/v1/audits/sync`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        user_email: email,
-                        audit_id: audit.id,
-                        audit_data: audit,
-                      }),
-                    });
-                  }
-                  const reRes = await fetch(`${getApiBase()}/v1/audits/user?email=${encodeURIComponent(email)}`);
-                  if (reRes.ok) {
-                    const reData = await reRes.json();
-                    if (reData.success && Array.isArray(reData.audits)) {
-                      setAudits(reData.audits);
-                      return;
-                    }
-                  }
-                }
-              } catch {
-                // Ignore parse errors
-              }
-            }
-          }
-
-          // El servidor es la fuente de verdad definitiva para esta cuenta
+          // El servidor es la fuente de verdad definitiva y exclusiva para la cuenta activa
           setAudits((prev) => {
             if (prev.length === serverAudits.length) {
               const unchanged = prev.every((item, i) => item.id === serverAudits[i]?.id);
@@ -194,7 +160,7 @@ export default function App() {
             return serverAudits;
           });
 
-          // Sincronizar fechas límites asociadas a contratos
+          // Sincronizar fechas límites asociadas exclusivamente a los contratos de este usuario
           const contractDeadlines: KeyDeadline[] = [];
           serverAudits.forEach((audit) => {
             if (audit.keyDeadlines) {
@@ -213,7 +179,7 @@ export default function App() {
             return [...contractDeadlines, ...customDeadlines];
           });
 
-          // Si la auditoría seleccionada fue eliminada en otro dispositivo, resetear selección
+          // Si la auditoría seleccionada ya no existe en el servidor para este usuario, resetear selección
           setSelectedAudit((prevSelected) => {
             if (prevSelected && !serverAudits.some((a) => a.id === prevSelected.id)) {
               return null;
@@ -262,21 +228,41 @@ export default function App() {
     };
   }, [currentUser?.email, refreshAudits]);
 
-  // Auth Handlers
+  // Auth Handlers con aislamiento estricto entre cuentas
   const handleLogin = (user: User) => {
+    // Resetear inmediatamente datos anteriores en memoria para que no se filtren a la nueva cuenta
+    setSelectedAudit(null);
     setCurrentUser(user);
     setCurrentTab('dashboard');
     setInactivityNotice(null);
+
+    // Cargar caché local específica de este usuario si existe
+    try {
+      const userCached = localStorage.getItem(`audiflow_audits_${user.email.toLowerCase()}`);
+      if (userCached) {
+        setAudits(JSON.parse(userCached));
+      } else {
+        setAudits([]);
+      }
+    } catch {
+      setAudits([]);
+    }
+
     showToast(`¡Bienvenido a Audiflow, ${user.name}!`);
     refreshAudits(user.email);
   };
 
   const handleLogout = () => {
+    // Limpieza total del estado para evitar que otra cuenta vea datos residuales
     setCurrentUser(null);
     setSelectedAudit(null);
+    setAudits([]);
+    setDeadlines([]);
     setInactivityNotice(null);
     localStorage.removeItem('audiflow_user');
     sessionStorage.removeItem('audiflow_user');
+    localStorage.removeItem('audiflow_audits'); // Eliminar clave residual global antigua
+    localStorage.removeItem('audiflow_deadlines');
     setCurrentTab('dashboard');
     showToast('Sesión cerrada correctamente.', 'info');
   };
