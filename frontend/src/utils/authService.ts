@@ -162,41 +162,59 @@ export async function authenticate(
     if (res.ok && data.success && data.user) {
       return { success: true, user: data.user };
     }
-    if (!res.ok) {
-      return { success: false, error: data.detail || data.error || 'Credenciales incorrectas.' };
-    }
   } catch (err) {
     console.warn('[Audiflow Auth] Backend API no disponible, validando en almacenamiento local.');
   }
 
-  // 2. Fallback de contingencia en LocalStorage
+  // 2. Si no está en el servidor, comprobar si existe en el almacenamiento local de este dispositivo
   const accounts = getRegisteredAccounts();
   const account = accounts.find((acc) => acc.email.toLowerCase() === normalizedEmail);
 
-  if (!account) {
-    return {
-      success: false,
-      error: 'No se encontró ninguna cuenta registrada con este correo electrónico. Por favor regístrate.',
-    };
-  }
+  if (account) {
+    const inputHash = await hashPassword(password);
+    if (account.passwordHash === inputHash) {
+      // ¡Cuenta local encontrada! Subirla automáticamente al servidor central para habilitar acceso multidispositivo
+      try {
+        const syncRes = await fetch(getAuthEndpoint('register'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: account.name,
+            email: account.email,
+            password: password,
+            company: account.company || 'Firma de Auditoría',
+            role: account.role || 'Auditor Legal Senior',
+          }),
+        });
+        const syncData = await syncRes.json();
+        if (syncRes.ok && syncData.user) {
+          return { success: true, user: syncData.user };
+        }
+      } catch (syncErr) {
+        console.warn('[Audiflow Auth] Error al auto-sincronizar cuenta local con el servidor:', syncErr);
+      }
 
-  const inputHash = await hashPassword(password);
-  if (account.passwordHash !== inputHash) {
-    return {
-      success: false,
-      error: 'Contraseña incorrecta. Por favor verifica tus credenciales.',
-    };
+      return {
+        success: true,
+        user: {
+          id: account.id,
+          name: account.name,
+          email: account.email,
+          role: account.role,
+          company: account.company,
+        },
+      };
+    } else {
+      return {
+        success: false,
+        error: 'Contraseña incorrecta. Por favor verifica tus credenciales.',
+      };
+    }
   }
 
   return {
-    success: true,
-    user: {
-      id: account.id,
-      name: account.name,
-      email: account.email,
-      role: account.role,
-      company: account.company,
-    },
+    success: false,
+    error: 'No se encontró ninguna cuenta registrada con este correo electrónico. Por favor regístrate.',
   };
 }
 
