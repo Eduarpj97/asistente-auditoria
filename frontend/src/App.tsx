@@ -18,13 +18,13 @@ function getApiBase(): string {
 }
 
 export default function App() {
-  // Authentication state (purga automática de cuentas corporativas pre-cargadas)
+  // Authentication state (persiste al recargar o refrescar la página)
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('audiflow_user');
+    const saved = localStorage.getItem('audiflow_user') || sessionStorage.getItem('audiflow_user');
     if (!saved) return null;
     try {
       const parsed: User = JSON.parse(saved);
-      if (parsed.id === 'usr-admin-corp' || parsed.email?.toLowerCase() === 'eduardo.pedroza@audiflow.com') {
+      if (parsed.id === 'usr-admin-corp') {
         localStorage.removeItem('audiflow_user');
         sessionStorage.removeItem('audiflow_user');
         return null;

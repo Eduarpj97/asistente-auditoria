@@ -107,7 +107,7 @@ export function getActiveSession(): User | null {
     if (!raw) return null;
 
     const user: User = JSON.parse(raw);
-    if (user.id === 'usr-admin-corp' || user.email?.toLowerCase() === 'eduardo.pedroza@audiflow.com') {
+    if (user.id === 'usr-admin-corp') {
       clearActiveSession();
       return null;
     }
