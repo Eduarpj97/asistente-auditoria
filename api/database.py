@@ -1,6 +1,8 @@
 import os
 import time
 import sqlite3
+import uuid
+import hashlib
 from typing import Dict, Any
 from dotenv import load_dotenv
 from supabase import create_client, Client
@@ -13,6 +15,18 @@ load_dotenv(dotenv_path=env_path)
 
 SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY: str = os.getenv("SUPABASE_SECRET_KEY") or os.getenv("SUPABASE_KEY") or os.getenv("SUPABASE_PUBLISHABLE_KEY", "")
+
+# Inicializar cliente de Supabase para respaldo dual
+supabase: Client = None
+if SUPABASE_URL and SUPABASE_KEY and "your-project" not in SUPABASE_URL:
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    except Exception as e:
+        print(f"[ERROR] No se pudo inicializar el cliente de Supabase: {e}")
+else:
+    print("[INFO] SUPABASE_URL o SUPABASE_KEY no configuradas con valores válidos. Modo SQLite Local activo.")
+
+DEFAULT_EMPRESA_ID = "emp-default-global"
 
 # Base de datos local SQLite (fallback automático y persistente)
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
@@ -115,11 +129,9 @@ def init_sqlite_db():
 init_sqlite_db()
 
 def hash_password(password: str) -> str:
-    import hashlib
     return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
 def db_register_user(name: str, email: str, password: str, company: str = "Firma de Auditoría", role: str = "Auditor Legal Senior") -> Dict[str, Any]:
-    import uuid
     norm_email = email.strip().lower()
     pwd_hash = hash_password(password)
     user_id = str(uuid.uuid4())
@@ -139,6 +151,26 @@ def db_register_user(name: str, email: str, password: str, company: str = "Firma
         """, (user_id, name.strip(), norm_email, pwd_hash, company.strip() or "Firma de Auditoría", role))
         conn.commit()
         conn.close()
+        
+        # Dual-write a Supabase (Respaldo en la nube sin bloquear si hay error de red)
+        if supabase:
+            try:
+                supabase.table("empresas").upsert({
+                    "id_empresa": DEFAULT_EMPRESA_ID,
+                    "nombre_empresa": company.strip() or "Firma de Auditoría",
+                    "nit_identificacion": "NIT-900123456-1"
+                }).execute()
+                supabase.table("usuarios").upsert({
+                    "id_usuario": user_id,
+                    "id_empresa": DEFAULT_EMPRESA_ID,
+                    "nombre": name.strip(),
+                    "email": norm_email,
+                    "password_hash": pwd_hash,
+                    "rol": role,
+                    "activo": True
+                }, on_conflict="email").execute()
+            except Exception as se:
+                print(f"[Supabase Dual-Write Notice] Usuario respaldado en SQLite (Supabase en espera: {se})")
         
         return {
             "success": True,
@@ -199,9 +231,8 @@ def seed_default_admin():
 
 seed_default_admin()
 
-
 def db_save_audit_sync(user_email: str, audit_id: str, audit_json: str) -> Dict[str, Any]:
-    """Guarda el JSON completo de una auditoría vinculada al email del usuario para sincronización cross-device."""
+    """Guarda el JSON completo de una auditoría en SQLite y lo sincroniza con Supabase para respaldo dual."""
     norm_email = user_email.strip().lower()
     try:
         conn = get_sqlite_conn()
@@ -212,13 +243,24 @@ def db_save_audit_sync(user_email: str, audit_id: str, audit_json: str) -> Dict[
         """, (audit_id, norm_email, audit_json))
         conn.commit()
         conn.close()
+
+        # Dual-write a Supabase
+        if supabase:
+            try:
+                supabase.table("auditorias_sync").upsert({
+                    "id_audit": audit_id,
+                    "user_email": norm_email,
+                    "audit_json": audit_json
+                }, on_conflict="id_audit,user_email").execute()
+            except Exception as se:
+                print(f"[Supabase Dual-Write Notice] Auditoría guardada en SQLite (Supabase en espera: {se})")
+
         return {"success": True}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
-
 def db_get_user_audits(user_email: str) -> list:
-    """Recupera todas las auditorías sincronizadas de un usuario por email."""
+    """Recupera todas las auditorías sincronizadas de un usuario por email (primero intenta SQLite, fallback a Supabase)."""
     import json
     norm_email = user_email.strip().lower()
     try:
@@ -229,20 +271,32 @@ def db_get_user_audits(user_email: str) -> list:
             (norm_email,)
         ).fetchall()
         conn.close()
-        result = []
-        for row in rows:
-            try:
-                result.append(json.loads(row[0]))
-            except Exception:
-                pass
-        return result
+        
+        if rows:
+            result = []
+            for row in rows:
+                try:
+                    result.append(json.loads(row[0]))
+                except Exception:
+                    pass
+            return result
     except Exception as e:
-        print(f"[ERROR] Error recuperando auditorías del usuario: {e}")
-        return []
+        print(f"[ERROR] Error recuperando auditorías en SQLite: {e}")
 
+    # Fallback a Supabase si SQLite no tiene o está vacío
+    if supabase:
+        try:
+            resp = supabase.table("auditorias_sync").select("audit_json").eq("user_email", norm_email).order("created_at", desc=True).execute()
+            if resp.data:
+                import json
+                return [json.loads(r["audit_json"]) for r in resp.data if "audit_json" in r]
+        except Exception:
+            pass
+
+    return []
 
 def db_delete_audit_sync(user_email: str, audit_id: str) -> Dict[str, Any]:
-    """Elimina una auditoría sincronizada de un usuario."""
+    """Elimina una auditoría sincronizada de un usuario en SQLite y Supabase."""
     norm_email = user_email.strip().lower()
     try:
         conn = get_sqlite_conn()
@@ -250,20 +304,16 @@ def db_delete_audit_sync(user_email: str, audit_id: str) -> Dict[str, Any]:
         c.execute("DELETE FROM auditorias_sync WHERE id_audit = ? AND user_email = ?", (audit_id, norm_email))
         conn.commit()
         conn.close()
+
+        if supabase:
+            try:
+                supabase.table("auditorias_sync").delete().eq("id_audit", audit_id).eq("user_email", norm_email).execute()
+            except Exception:
+                pass
+
         return {"success": True}
     except Exception as e:
         return {"success": False, "error": str(e)}
-
-
-supabase: Client = None
-
-if SUPABASE_URL and SUPABASE_KEY and "your-project" not in SUPABASE_URL:
-    try:
-        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-    except Exception as e:
-        print(f"[ERROR] No se pudo inicializar el cliente de Supabase: {e}")
-else:
-    print("[INFO] SUPABASE_URL o SUPABASE_KEY no configuradas con valores válidos. Modo SQLite Local activo.")
 
 def check_db_health() -> Dict[str, Any]:
     """
@@ -277,7 +327,7 @@ def check_db_health() -> Dict[str, Any]:
             latency_ms = round((time.time() - start_time) * 1000, 2)
             return {
                 "status": "ONLINE",
-                "motor": "Supabase Cloud",
+                "motor": "Supabase Cloud + SQLite Local (Respaldo Dual)",
                 "url": SUPABASE_URL,
                 "latency_ms": latency_ms,
                 "tables_ready": True
@@ -288,7 +338,7 @@ def check_db_health() -> Dict[str, Any]:
                 "motor": "SQLite Local (Fallback Resiliente)",
                 "url_supabase": SUPABASE_URL,
                 "error_supabase": str(e),
-                "mensaje": "Base de datos local activa y funcional. En espera de API Key válida de Supabase."
+                "mensaje": "Base de datos local activa y funcional. En espera de permisos o API Key de Supabase."
             }
     
     return {

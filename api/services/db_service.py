@@ -2,7 +2,7 @@ import uuid
 import hashlib
 import sqlite3
 from typing import Dict, Any, List, Optional
-from database import supabase, SQLITE_DB_PATH, get_sqlite_conn
+from database import supabase, SQLITE_DB_PATH, get_sqlite_conn, DEFAULT_EMPRESA_ID
 
 class DatabaseAuditService:
     """
@@ -109,7 +109,7 @@ class DatabaseAuditService:
         # Preparar registros estructurados
         doc_record = {
             "id_documento": document_id,
-            "id_empresa": None,
+            "id_empresa": DEFAULT_EMPRESA_ID,
             "id_usuario_carga": None,
             "nombre_original": filename,
             "hash_sha256": file_hash,
@@ -175,13 +175,18 @@ class DatabaseAuditService:
         supabase_saved = False
         if supabase:
             try:
-                supabase.table("documentos").insert(doc_record).execute()
+                supabase.table("empresas").upsert({
+                    "id_empresa": DEFAULT_EMPRESA_ID,
+                    "nombre_empresa": "Firma de Auditoría Corporativa",
+                    "nit_identificacion": "NIT-900123456-1"
+                }).execute()
+                supabase.table("documentos").upsert(doc_record, on_conflict="id_documento").execute()
                 if ocr_records:
-                    supabase.table("texto_ocr").insert(ocr_records).execute()
+                    supabase.table("texto_ocr").upsert(ocr_records, on_conflict="id_ocr").execute()
                 if clause_records:
-                    supabase.table("clausulas_extraidas").insert(clause_records).execute()
+                    supabase.table("clausulas_extraidas").upsert(clause_records, on_conflict="id_clausula").execute()
                 if risk_records:
-                    supabase.table("analisis_riesgos").insert(risk_records).execute()
+                    supabase.table("analisis_riesgos").upsert(risk_records, on_conflict="id_riesgo").execute()
                 supabase_saved = True
             except Exception as e:
                 print(f"[Supabase Sync Notice] Guardado en la nube omitido ({e}). Aplicando persistencia en SQLite Local.")

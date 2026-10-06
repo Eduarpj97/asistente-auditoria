@@ -304,5 +304,26 @@ async def get_normativas_vigentes():
         "contenido_markdown": contenido
     }
 
+@app.post("/v1/db/sync-supabase", summary="Ejecutar sincronización dual de SQLite a Supabase")
+async def trigger_supabase_sync():
+    """
+    Sincroniza todos los registros de usuarios, auditorías y documentos
+    almacenados en SQLite hacia Supabase Cloud.
+    """
+    from sync_supabase import sync_usuarios, sync_documentos_y_detalles, sync_auditorias_completas, ensure_default_empresa
+    ensure_default_empresa()
+    u_count = await asyncio.to_thread(sync_usuarios)
+    doc_stats = await asyncio.to_thread(sync_documentos_y_detalles)
+    sync_count = await asyncio.to_thread(sync_auditorias_completas)
+    return {
+        "status": "COMPLETED",
+        "usuarios_sincronizados": u_count,
+        "documentos_sincronizados": doc_stats["documentos"],
+        "ocr_sincronizados": doc_stats["ocr"],
+        "clausulas_sincronizadas": doc_stats["clausulas"],
+        "riesgos_sincronizados": doc_stats["riesgos"],
+        "auditorias_completas_sincronizadas": sync_count
+    }
+
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
