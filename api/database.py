@@ -3,7 +3,7 @@ import time
 import sqlite3
 import uuid
 import hashlib
-from typing import Dict, Any
+from typing import Dict, Any, Optional, List
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
