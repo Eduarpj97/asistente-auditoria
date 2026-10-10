@@ -264,20 +264,20 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
         )}
       </div>
 
-      {/* Executive Summary Card (Dictamen en Profundidad) */}
+      {/* Resumen del Documento */}
       <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl p-6 sm:p-7 border border-black/[0.04] dark:border-white/[0.06] shadow-xs space-y-3">
         <div className="flex items-center justify-between pb-3 border-b border-black/[0.04] dark:border-white/[0.06]">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#0071e3] dark:text-[#2997ff]">
             <Sparkles className="w-4 h-4 text-[#0071e3]" />
-            <span>Dictamen Legal y Resumen Ejecutivo</span>
+            <span>Resumen del Documento</span>
           </div>
           <span className="text-[11px] font-medium text-[#86868b] bg-black/[0.03] dark:bg-white/[0.06] px-2.5 py-0.5 rounded-full">
-            Evaluación Forense Integral
+            Contenido y Alcance
           </span>
         </div>
-        <div className="text-[#1d1d1f] dark:text-[#f5f5f7] text-xs sm:text-sm leading-relaxed whitespace-pre-line space-y-2">
+        <p className="text-[#1d1d1f] dark:text-[#f5f5f7] text-xs sm:text-sm leading-relaxed whitespace-pre-line">
           {audit.summary}
-        </div>
+        </p>
       </div>
 
       {/* Tabs: Cláusulas vs Riesgos vs Omisiones */}
@@ -544,7 +544,7 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
                     {risk.exactLocation && (
                       <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-500/10 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 text-xs font-semibold">
                         <Search className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
-                        <span>Revisar con Lupa:</span>
+                        <span>Revisar con Lupa en Documento:</span>
                         <span className="font-bold underline">{risk.exactLocation}</span>
                       </div>
                     )}
@@ -557,20 +557,36 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
                   </div>
                 )}
                 {risk.quoteSnippet && (
-                  <div className="p-3 rounded-2xl bg-black/[0.02] dark:bg-black/40 border border-black/[0.04] dark:border-white/[0.06] text-xs font-mono italic text-[#1d1d1f] dark:text-[#f5f5f7]">
-                    "{risk.quoteSnippet}"
+                  <div className="p-3.5 rounded-2xl bg-amber-50/40 dark:bg-black/50 border border-amber-200/60 dark:border-amber-900/30 text-xs space-y-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-400 block">
+                      Texto del Documento Original donde está el Riesgo:
+                    </span>
+                    <p className="font-mono italic text-[#1d1d1f] dark:text-[#f5f5f7] leading-relaxed">
+                      "{risk.quoteSnippet}"
+                    </p>
                   </div>
                 )}
-                <p className="text-xs sm:text-sm text-[#86868b] leading-relaxed">
+                <div className="text-xs sm:text-sm text-[#86868b] leading-relaxed">
+                  <span className="font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">Diagnóstico del Riesgo: </span>
                   {risk.description}
-                </p>
-                <div className="p-3.5 rounded-2xl bg-emerald-50/40 dark:bg-emerald-950/30 border border-emerald-200/50 dark:border-emerald-900/40 flex items-start gap-2.5 text-xs">
+                </div>
+                <div className="p-3.5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-900/40 flex items-start gap-2.5 text-xs">
                   <Check className="w-4 h-4 text-[#34c759] shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-semibold text-emerald-900 dark:text-emerald-300">Medida Preventiva / Mitigación: </span>
-                    <span className="text-emerald-800 dark:text-emerald-200">{risk.mitigation}</span>
+                    <span className="font-bold text-emerald-950 dark:text-emerald-300">Recomendación Legal & Preventiva: </span>
+                    <span className="text-emerald-900 dark:text-emerald-200 leading-relaxed">{risk.mitigation}</span>
                   </div>
                 </div>
+                {risk.suggestedDrafting && (
+                  <div className="p-3 rounded-2xl bg-blue-50/40 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-900/40 text-xs space-y-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#0071e3] block">
+                      Redacción Sugerida para Adenda:
+                    </span>
+                    <p className="font-mono text-[#1d1d1f] dark:text-[#f5f5f7] text-[11px] leading-relaxed">
+                      "{risk.suggestedDrafting}"
+                    </p>
+                  </div>
+                )}
               </div>
             ))}
           </div>

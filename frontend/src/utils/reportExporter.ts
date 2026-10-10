@@ -83,10 +83,10 @@ export async function exportToWord(audit: ContractAudit): Promise<void> {
             spacing: { after: 200 },
           }),
 
-          // Executive Summary (Dictamen Jurídico en Detalle)
+          // Resumen del Documento
           new Paragraph({
             heading: HeadingLevel.HEADING_2,
-            children: [new TextRun({ text: '3. Dictamen Legal y Resumen Ejecutivo', bold: true, color: '0F2744' })],
+            children: [new TextRun({ text: '3. Resumen del Documento', bold: true, color: '0F2744' })],
             spacing: { before: 200, after: 100 },
           }),
           new Paragraph({
@@ -94,10 +94,10 @@ export async function exportToWord(audit: ContractAudit): Promise<void> {
             spacing: { after: 300 },
           }),
 
-          // Identified Risks (Matriz Corregida con Párrafos y Formato Limpio)
+          // Identified Risks (Matriz con Citas del Original y Recomendaciones Legales)
           new Paragraph({
             heading: HeadingLevel.HEADING_2,
-            children: [new TextRun({ text: '4. Matriz de Contingencias y Riesgos Detectados', bold: true, color: '0F2744' })],
+            children: [new TextRun({ text: '4. Matriz de Contingencias, Riesgos y Recomendaciones Legales', bold: true, color: '0F2744' })],
             spacing: { before: 300, after: 100 },
           }),
           ...audit.risksIdentified.flatMap((risk, idx) => {
@@ -130,7 +130,7 @@ export async function exportToWord(audit: ContractAudit): Promise<void> {
               riskParagraphs.push(
                 new Paragraph({
                   children: [
-                    new TextRun({ text: '📄 Cita Textual Literal: ', bold: true }),
+                    new TextRun({ text: '📄 Texto del Documento Original donde está el Riesgo: ', bold: true }),
                     new TextRun({ text: `"${risk.quoteSnippet}"`, italics: true, color: '4A5568' }),
                   ],
                 })
@@ -160,12 +160,24 @@ export async function exportToWord(audit: ContractAudit): Promise<void> {
             riskParagraphs.push(
               new Paragraph({
                 children: [
-                  new TextRun({ text: '• Medida Preventiva / Mitigación: ', bold: true, color: '2F855A' }),
+                  new TextRun({ text: '🛡️ Recomendación Legal & Preventiva: ', bold: true, color: '2F855A' }),
                   new TextRun({ text: risk.mitigation, italics: true }),
                 ],
-                spacing: { after: 150 },
+                spacing: { after: risk.suggestedDrafting ? 60 : 150 },
               })
             );
+
+            if (risk.suggestedDrafting) {
+              riskParagraphs.push(
+                new Paragraph({
+                  children: [
+                    new TextRun({ text: '📝 Redacción Sugerida para Adenda: ', bold: true, color: '2B6CB0' }),
+                    new TextRun({ text: `"${risk.suggestedDrafting}"`, italics: true }),
+                  ],
+                  spacing: { after: 150 },
+                })
+              );
+            }
 
             return riskParagraphs;
           }),
@@ -415,12 +427,12 @@ export function exportToPDF(audit: ContractAudit): void {
 
   y += 34;
 
-  // Executive Summary (Dictamen Jurídico)
+  // Resumen del Documento
   checkPageBreak(35);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(15, 39, 68);
-  doc.text('DICTAMEN LEGAL Y RESUMEN EJECUTIVO', margin, y);
+  doc.text('RESUMEN DEL DOCUMENTO', margin, y);
   y += 5;
 
   doc.setFont('helvetica', 'normal');
@@ -436,17 +448,18 @@ export function exportToPDF(audit: ContractAudit): void {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(15, 39, 68);
-  doc.text('CONTINGENCIAS Y RIESGOS PRINCIPALES', margin, y);
+  doc.text('MATRIZ DE RIESGOS Y RECOMENDACIONES LEGALES', margin, y);
   y += 6;
 
   audit.risksIdentified.forEach((risk, i) => {
-    const descLines = doc.splitTextToSize(`Detalle del Riesgo: ${risk.description}`, pageWidth - margin * 2 - 6);
-    const mitLines = doc.splitTextToSize(`Mitigación / Control: ${risk.mitigation}`, pageWidth - margin * 2 - 6);
-    const locLines = risk.exactLocation ? doc.splitTextToSize(`Revisar con Lupa: ${risk.exactLocation}`, pageWidth - margin * 2 - 6) : [];
-    const quoteLines = risk.quoteSnippet ? doc.splitTextToSize(`"${risk.quoteSnippet}"`, pageWidth - margin * 2 - 8) : [];
+    const descLines = doc.splitTextToSize(`Diagnóstico del Riesgo: ${risk.description}`, pageWidth - margin * 2 - 6);
+    const mitLines = doc.splitTextToSize(`Recomendación Legal & Preventiva: ${risk.mitigation}`, pageWidth - margin * 2 - 6);
+    const locLines = risk.exactLocation ? doc.splitTextToSize(`Revisar con Lupa en Documento: ${risk.exactLocation}`, pageWidth - margin * 2 - 6) : [];
+    const quoteLines = risk.quoteSnippet ? doc.splitTextToSize(`Texto Original: "${risk.quoteSnippet}"`, pageWidth - margin * 2 - 8) : [];
     const legalLines = risk.legalReference ? doc.splitTextToSize(`Marco Normativo: ${risk.legalReference}`, pageWidth - margin * 2 - 6) : [];
+    const draftLines = risk.suggestedDrafting ? doc.splitTextToSize(`Redacción Sugerida: "${risk.suggestedDrafting}"`, pageWidth - margin * 2 - 6) : [];
 
-    const totalHeight = descLines.length * 3.8 + mitLines.length * 3.8 + locLines.length * 3.8 + quoteLines.length * 3.5 + legalLines.length * 3.5 + 14;
+    const totalHeight = descLines.length * 3.8 + mitLines.length * 3.8 + locLines.length * 3.8 + quoteLines.length * 3.5 + legalLines.length * 3.5 + draftLines.length * 3.5 + 14;
     checkPageBreak(totalHeight);
 
     doc.setFont('helvetica', 'bold');
@@ -481,10 +494,19 @@ export function exportToPDF(audit: ContractAudit): void {
       y += legalLines.length * 3.5;
     }
 
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(30, 62, 98);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(47, 133, 90);
     doc.text(mitLines, margin + 4, y);
-    y += mitLines.length * 3.8 + 3;
+    y += mitLines.length * 3.8 + 2;
+
+    if (draftLines.length > 0) {
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(43, 108, 176);
+      doc.text(draftLines, margin + 4, y);
+      y += draftLines.length * 3.5 + 2;
+    }
+
+    y += 3;
   });
   y += 4;
 

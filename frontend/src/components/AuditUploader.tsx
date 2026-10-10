@@ -190,6 +190,11 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
           ? c.cita_textual
           : 'Texto específico analizado en las estipulaciones del documento.';
 
+        const recommendationText =
+          c.recomendacion_legal ||
+          c.recomendacion_negociacion ||
+          'Revisar la estipulación en el documento original e incorporar salvaguardas de reciprocidad antes de firmar.';
+
         mappedClauses.push({
           id: `clause-llm-${idx + 1}`,
           title: `[Auditoría] ${c.tipo || 'Cláusula Crítica'}: ${
@@ -205,9 +210,7 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
             c.explicacion_riesgo ||
             'Contingencia contractual identificada por el motor de inferencia semántica.',
           legalReference: c.fundamento_normativo || 'Estatuto de Contratación Mercantil y Buenas Prácticas',
-          recommendation:
-            c.recomendacion_negociacion ||
-            'Negociar enmienda formal de salvaguarda con la contraparte.',
+          recommendation: recommendationText,
           suggestedDrafting: c.redaccion_sugerida || (c.tipo ? `Se estipula que en caso de controversia sobre ${c.tipo}, las partes ajustarán sus obligaciones conforme a los principios de buena fe y reciprocidad económica.` : undefined),
           compliant: false,
         });
@@ -241,9 +244,14 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
         });
       });
 
-      // Mapear matriz de riesgos identificados
+      // Mapear matriz de riesgos identificados (con recomendación legal, ubicación y cita del original)
       const mappedRisks: RiskItem[] = [];
       criticalClauses.forEach((c: any) => {
+        const rec =
+          c.recomendacion_legal ||
+          c.recomendacion_negociacion ||
+          'Solicitar ajuste formal en el documento original o adenda previa a la firma.';
+
         mappedRisks.push({
           title: `Riesgo Contractual: ${c.tipo || 'Cláusula Crítica'}`,
           severity: c.severidad === 'ALTO' ? 'critical' : 'high',
@@ -251,7 +259,7 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
           quoteSnippet: c.cita_textual,
           description: c.explicacion_riesgo || 'Riesgo de asimetría o penalidad excesiva.',
           legalReference: c.fundamento_normativo || 'Régimen de Obligaciones Mercantiles',
-          mitigation: c.recomendacion_negociacion || 'Solicitar adenda previa firma.',
+          mitigation: rec,
           suggestedDrafting: c.redaccion_sugerida,
         });
       });
@@ -262,12 +270,12 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
           title: `Vulnerabilidad Normativa: ${rf.rule_code || 'Regulación'}`,
           severity: rf.risk_weight > 20 ? 'critical' : 'high',
           exactLocation: isOmission
-            ? `[Omisión] Acápite de ${rf.category || 'Cumplimiento'}`
-            : rf.chunk_index !== undefined ? `Párrafo ${rf.chunk_index + 1}` : 'Texto del contrato',
+            ? `[Omisión] Sección ausente en documento: Acápite de ${rf.category || 'Cumplimiento'}`
+            : rf.chunk_index !== undefined ? `Párrafo ${rf.chunk_index + 1} del documento original` : 'Texto del documento original',
           quoteSnippet: rf.matched_snippet || undefined,
           description: rf.description,
           legalReference: rf.legal_reference || 'Normativa aplicable',
-          mitigation: rf.remediation || `Aplicar control según ${rf.legal_reference || 'normativa aplicable'}.`,
+          mitigation: rf.remediation || `Recomendación Legal: Incorporar cláusula de salvaguarda según ${rf.legal_reference || 'normativa aplicable'}.`,
         });
       });
 
@@ -275,28 +283,13 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
       const cleanTitle = uploadFileName.replace(/\.[^/.]+$/, '').replace(/_/g, ' ');
       const cleanTitleFormatted = cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1);
 
-      // Generar Dictamen y Resumen Ejecutivo Detallado (Objeto, partes, economía y diagnóstico legal)
+      // Generar Resumen sobre de qué trata y habla el documento (sin objetivos ni diagnóstico)
       const generateDetailedSummary = (): string => {
-        if (aiLlm.resumen_ejecutivo && aiLlm.resumen_ejecutivo.length > 80 && !aiLlm.resumen_ejecutivo.includes('Llama 3.1')) {
+        if (aiLlm.resumen_ejecutivo && aiLlm.resumen_ejecutivo.length > 50 && !aiLlm.resumen_ejecutivo.includes('Llama 3.1') && !aiLlm.resumen_ejecutivo.includes('1. OBJETO')) {
           return aiLlm.resumen_ejecutivo;
         }
 
-        const riskEvaluation = overallRisk > 60
-          ? 'Nivel de Riesgo Alto / Crítico (se desaconseja firma sin adenda previa)'
-          : overallRisk > 35
-          ? 'Nivel de Riesgo Moderado (requiere enmiendas de salvaguarda y ajuste normativo)'
-          : 'Nivel de Riesgo Bajo / Conforme a estándares de la organización';
-
-        const totalPoints = ruleFindings.length + criticalClauses.length;
-
-        return `1. OBJETO Y ALCANCE DEL CONTRATO:
-El presente instrumento (${cleanTitleFormatted}) corresponde a un acuerdo comercial y legal celebrado con el propósito de fijar las obligaciones operativas, facultades y compromisos entre las partes. Su estructura define el marco de prestación, términos de vigencia y parámetros de ejecución técnica y comercial.
-
-2. EVALUACIÓN FORENSE DE RIESGOS:
-El documento presenta un ${riskEvaluation}, obteniendo un índice de cumplimiento normativo del ${compliance}% frente a los estándares regulatorios aplicables. Se identificaron ${totalPoints} puntos clave que exigen revisión jurídica con lupa, principalmente en asimetrías de penalización, limitaciones de responsabilidad y omisiones en cláusulas obligatorias de cumplimiento.
-
-3. DICTAMEN LEGAL Y RECOMENDACIÓN ESTRATÉGICA:
-Se recomienda formalizar una Adenda de Modificación que incorpore las cláusulas omitidas de protección de datos, prevención de riesgos y resolución equitativa, subsanando los hallazgos críticos detallados en este informe previo al perfeccionamiento del contrato.`;
+        return `Este documento (${cleanTitleFormatted}) corresponde a un acuerdo comercial y contractual celebrado para regular la relación operativa y económica entre las partes. En su contenido se establecen las condiciones de prestación de servicios o provisión comercial, el régimen de pagos, las facultades de ejecución, las directrices de confidencialidad y los términos de vigencia aplicables a la relación negocial.`;
       };
 
       const newAudit: ContractAudit = {

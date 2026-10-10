@@ -140,12 +140,7 @@ class LLMAuditService:
                 pass
 
         default_summary = (
-            "1. OBJETO Y ALCANCE:\n"
-            "El instrumento corresponde a un contrato de prestación de servicios y provisión tecnológica que regula los términos de ejecución, licenciamiento y contraprestación entre las partes.\n\n"
-            "2. DIAGNÓSTICO DE RIESGOS:\n"
-            "Se detectan contingencias en equilibrio prestacional, delimitación de responsabilidades y omisión de cláusulas regulatorias obligatorias.\n\n"
-            "3. RECOMENDACIÓN LEGAL:\n"
-            "Implementar adenda previa a la firma formal para incorporar salvaguardas normativas."
+            "El presente documento corresponde a un acuerdo comercial y operativo celebrado entre las partes para regular la prestación de servicios, términos de ejecución técnica, niveles operativos y condiciones de contraprestación económica en el marco del negocio convenido."
         )
 
         return {
@@ -205,35 +200,34 @@ class LLMAuditService:
         normativas_ref = self.get_normativa_2026_summary()
 
         system_prompt = (
-            "Eres Audiflow, un auditor legal de élite y perito forense en contratación mercantil y financiera. "
+            "Eres Audiflow, una herramienta profesional de auditoría legal y análisis pericial de contratos. "
             "Evalúa el contrato aplicando RIGUROSAMENTE las siguientes normativas y buenas prácticas:\n"
             f"{normativas_ref}\n\n"
             "INSTRUCCIONES CLAVE:\n"
-            "1. En 'resumen_ejecutivo', redacta un DICTAMEN DETALLADO y exhaustivo estructurado en:\n"
-            "   - Objeto y partes del contrato (de qué se trata, partes intervinientes y alcance).\n"
-            "   - Diagnóstico forense de riesgos identificados en el texto.\n"
-            "   - Recomendación legal y estratégica para la firma o negociación.\n"
-            "2. En 'clausulas_criticas', identifica cláusulas o estipulaciones que representen riesgos reales (penalidades asimétricas, SLAs sin compensación, limitación unilateral de responsabilidad, omisión de Habeas Data o AML). Para cada una proporciona:\n"
+            "1. En 'resumen_ejecutivo', explica DE QUÉ TRATA EL DOCUMENTO de forma clara, directa y comprensible (ej. tipo de acuerdo, servicios o productos pactados, obligaciones centrales entre las partes y alcance). NO incluyas listas de objetivos ni diagnósticos formales en esta sección, solo describe de qué habla el contrato.\n"
+            "2. En 'clausulas_criticas', identifica estipulaciones riesgosas del documento original (penalidades excesivas, responsabilidad asimétrica, cláusulas abusivas, omisión de Habeas Data o AML) y para CADA UNA cita exactamente el documento original para sustentar el riesgo y emitir la recomendación legal correspondiente:\n"
             "   - 'tipo': Categoría jurídica (ej. Responsabilidad, Penalidad, Privacidad, AML, SLA, Terminación).\n"
             "   - 'severidad': ALTO | MEDIO | BAJO.\n"
-            "   - 'ubicacion_exacta': Dónde revisar con lupa (ej. 'Cláusula Quinta, Numeral 5.2', 'Cláusula Novena, Párrafo 2', o 'Sección ausente en el contrato').\n"
-            "   - 'cita_textual': Fragmento textual literal del contrato donde se evidencia el riesgo.\n"
-            "   - 'explicacion_riesgo': Diagnóstico preciso de la contingencia legal o económica.\n"
-            "   - 'fundamento_normativo': Norma, ley o estándar real aplicable (sin alucinaciones).\n"
-            "   - 'redaccion_sugerida': Propuesta de redacción equilibrada para incorporar mediante adenda.\n\n"
+            "   - 'ubicacion_exacta': Dónde revisar con lupa en el documento original (ej. 'Cláusula Quinta, Numeral 5.2', 'Cláusula Novena, Párrafo 2', o 'Sección ausente en el documento').\n"
+            "   - 'cita_textual': Fragmento literal exacto extraído del documento original donde radica el riesgo.\n"
+            "   - 'explicacion_riesgo': Explicación clara de por qué este punto específico genera riesgo.\n"
+            "   - 'fundamento_normativo': Norma, ley o estándar legal aplicable.\n"
+            "   - 'recomendacion_legal': Recomendación legal y preventiva específica ante este riesgo detectado.\n"
+            "   - 'redaccion_sugerida': Propuesta de redacción contractual equilibrada para incluir en una adenda.\n\n"
             "Debes responder OBLIGATORIAMENTE en formato JSON válido con esta estructura:\n"
             "{\n"
             '  "score_riesgo_ia": <numero entero 0-100>,\n'
             '  "nivel_riesgo_ia": "<ALTO | MEDIO | BAJO>",\n'
-            '  "resumen_ejecutivo": "<dictamen detallado explicando de qué se trata el contrato, riesgos y recomendación>",\n'
+            '  "resumen_ejecutivo": "<resumen claro explicando de qué trata y habla el documento>",\n'
             '  "clausulas_criticas": [\n'
             '    {\n'
             '      "tipo": "<tipo>",\n'
             '      "severidad": "<ALTO | MEDIO | BAJO>",\n'
             '      "ubicacion_exacta": "<dónde revisar con lupa>",\n'
-            '      "cita_textual": "<cita literal>",\n'
+            '      "cita_textual": "<cita literal del documento original>",\n'
             '      "explicacion_riesgo": "<detalle del riesgo>",\n'
             '      "fundamento_normativo": "<normativa>",\n'
+            '      "recomendacion_legal": "<recomendación legal preventiva>",\n'
             '      "redaccion_sugerida": "<redacción sugerida para adenda>"\n'
             '    }\n'
             '  ]\n'
@@ -292,12 +286,7 @@ class LLMAuditService:
 
         # Fallback inteligente y descriptivo: el informe de auditoría se mantiene íntegro
         fallback_summary = (
-            "1. OBJETO Y ALCANCE:\n"
-            "El instrumento corresponde a un contrato comercial y operativo que regula compromisos de provisión, servicios y facultades entre las partes intervinientes.\n\n"
-            "2. DIAGNÓSTICO FORENSE DE RIESGOS:\n"
-            "Se detectan posibles asimetrías operativas y necesidad de verificación frente a los 14 controles normativos del catálogo para identificar penalidades desproporcionadas y omisiones de cumplimiento.\n\n"
-            "3. RECOMENDACIÓN LEGAL:\n"
-            "Revisar con lupa las estipulaciones de responsabilidad y formalizar adenda de salvaguarda regulatoria previa suscripción."
+            "El documento corresponde a un contrato y acuerdo legal que establece las obligaciones, términos de prestación, facultades y compromisos operativos y comerciales entre las partes contratantes."
         )
 
         return {
