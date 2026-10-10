@@ -264,68 +264,21 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
         )}
       </div>
 
-      {/* Executive Summary Card */}
-      <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl p-6 sm:p-7 border border-black/[0.04] dark:border-white/[0.06] shadow-xs">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#0071e3] dark:text-[#2997ff] mb-2">
-          <Sparkles className="w-4 h-4 text-[#0071e3]" />
-          <span>Dictamen y Resumen Ejecutivo</span>
+      {/* Executive Summary Card (Dictamen en Profundidad) */}
+      <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl p-6 sm:p-7 border border-black/[0.04] dark:border-white/[0.06] shadow-xs space-y-3">
+        <div className="flex items-center justify-between pb-3 border-b border-black/[0.04] dark:border-white/[0.06]">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#0071e3] dark:text-[#2997ff]">
+            <Sparkles className="w-4 h-4 text-[#0071e3]" />
+            <span>Dictamen Legal y Resumen Ejecutivo</span>
+          </div>
+          <span className="text-[11px] font-medium text-[#86868b] bg-black/[0.03] dark:bg-white/[0.06] px-2.5 py-0.5 rounded-full">
+            Evaluación Forense Integral
+          </span>
         </div>
-        <p className="text-[#1d1d1f] dark:text-[#f5f5f7] text-sm sm:text-base leading-relaxed">
+        <div className="text-[#1d1d1f] dark:text-[#f5f5f7] text-xs sm:text-sm leading-relaxed whitespace-pre-line space-y-2">
           {audit.summary}
-        </p>
-      </div>
-
-      {/* Urgent Deadlines Notification Banner */}
-      {audit.keyDeadlines && audit.keyDeadlines.length > 0 && (
-        <div className="bg-red-50/40 dark:bg-red-950/20 rounded-3xl p-6 border border-red-200/60 dark:border-red-900/40 shadow-xs">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-full bg-red-100 dark:bg-red-950/60 text-[#ff3b30]">
-                <Clock className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
-                  Alertas de Vencimiento y Fechas Límite
-                </h3>
-                <p className="text-xs text-[#86868b]">
-                  Hitos críticos extraídos para evitar renovaciones forzosas o penalizaciones.
-                </p>
-              </div>
-            </div>
-            <span className="text-xs font-medium text-[#ff3b30] bg-red-100 dark:bg-red-950/60 px-3 py-1 rounded-full self-start sm:self-auto">
-              {audit.keyDeadlines.length} Plazos Clave Detectados
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {audit.keyDeadlines.map((dl, idx) => (
-              <div
-                key={idx}
-                className="p-4 rounded-2xl bg-white dark:bg-[#1c1c1e] border border-black/[0.04] dark:border-white/[0.06] shadow-xs space-y-2"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">{dl.date}</span>
-                  <span
-                    className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                      dl.urgency === 'urgent'
-                        ? 'bg-red-50 dark:bg-red-950/50 text-[#ff3b30]'
-                        : 'bg-amber-50 dark:bg-amber-950/50 text-[#ff9500]'
-                    }`}
-                  >
-                    {dl.daysRemaining !== undefined
-                      ? dl.daysRemaining <= 0
-                        ? 'Vence hoy'
-                        : `${dl.daysRemaining} días restantes`
-                      : 'Hito fijado'}
-                  </span>
-                </div>
-                <h4 className="text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">{dl.title}</h4>
-                <p className="text-[11px] text-[#86868b] leading-snug">{dl.description}</p>
-              </div>
-            ))}
-          </div>
         </div>
-      )}
+      </div>
 
       {/* Tabs: Cláusulas vs Riesgos vs Omisiones */}
       <div className="space-y-4">
@@ -494,29 +447,63 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
                         </div>
                       </div>
 
-                      {/* Snippet */}
-                      <div className="mt-4 p-3 rounded-xl bg-black/[0.02] dark:bg-black/40 border border-black/[0.04] dark:border-white/[0.06] text-xs font-mono text-[#1d1d1f] dark:text-[#f5f5f7] italic">
-                        "{clause.originalSnippet}"
+                      {/* Ubicación para Revisión con Lupa */}
+                      <div className="mt-3.5 flex flex-wrap items-center gap-2">
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-500/10 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 text-xs font-semibold">
+                          <Search className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                          <span>Revisar con Lupa:</span>
+                          <span className="font-bold underline decoration-amber-500/50">
+                            {clause.exactLocation || (clause.compliant ? 'Cláusula identificada en el documento' : 'Sección contractual bajo observación')}
+                          </span>
+                        </div>
+                        {clause.legalReference && (
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/[0.03] dark:bg-white/[0.06] text-[#86868b] text-[11px] font-mono">
+                            <Scale className="w-3 h-3 text-[#0071e3]" />
+                            <span>{clause.legalReference}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Snippet / Cita Textual Literal */}
+                      <div className="mt-3 p-3.5 rounded-2xl bg-black/[0.02] dark:bg-black/40 border border-black/[0.04] dark:border-white/[0.06] space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#86868b] block">
+                          Cita Textual Literal del Contrato:
+                        </span>
+                        <p className="text-xs font-mono text-[#1d1d1f] dark:text-[#f5f5f7] italic leading-relaxed">
+                          "{clause.originalSnippet}"
+                        </p>
                       </div>
 
                       {/* Findings & Recommendations */}
                       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                        <div className="p-3.5 rounded-xl bg-red-50/40 dark:bg-red-950/30 border border-red-200/50 dark:border-red-900/40 space-y-1">
+                        <div className="p-4 rounded-2xl bg-red-50/40 dark:bg-red-950/30 border border-red-200/50 dark:border-red-900/40 space-y-2">
                           <div className="flex items-center gap-1.5 font-semibold text-[#ff3b30]">
                             <ShieldAlert className="w-3.5 h-3.5 text-[#ff3b30]" />
-                            <span>Hallazgo Jurídico</span>
+                            <span>Hallazgo Jurídico & Dictamen</span>
                           </div>
-                          <p className="text-[#1d1d1f] dark:text-[#f5f5f7] leading-relaxed">{clause.finding}</p>
+                          <p className="text-[#1d1d1f] dark:text-[#f5f5f7] leading-relaxed text-xs">{clause.finding}</p>
+                          {clause.legalReference && (
+                            <p className="text-[11px] text-[#86868b] pt-1 border-t border-red-200/40 dark:border-red-900/40">
+                              <span className="font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">Marco Normativo: </span>
+                              <span className="text-[#0071e3] dark:text-[#2997ff]">{clause.legalReference}</span>
+                            </p>
+                          )}
                         </div>
 
-                        <div className="p-3.5 rounded-xl bg-blue-50/40 dark:bg-blue-950/30 border border-blue-200/50 dark:border-blue-900/40 space-y-1">
+                        <div className="p-4 rounded-2xl bg-blue-50/40 dark:bg-blue-950/30 border border-blue-200/50 dark:border-blue-900/40 space-y-2">
                           <div className="flex items-center gap-1.5 font-semibold text-[#0071e3] dark:text-[#2997ff]">
                             <Sparkles className="w-3.5 h-3.5 text-[#0071e3]" />
                             <span>Recomendación de Redacción / Enmienda</span>
                           </div>
-                          <p className="text-[#1d1d1f] dark:text-[#f5f5f7] leading-relaxed">
+                          <p className="text-[#1d1d1f] dark:text-[#f5f5f7] leading-relaxed text-xs">
                             {clause.recommendation}
                           </p>
+                          {clause.suggestedDrafting && (
+                            <div className="mt-2 p-2.5 rounded-xl bg-white/80 dark:bg-[#161617] border border-blue-200/50 dark:border-blue-900/40 text-[11px] text-[#1d1d1f] dark:text-[#f5f5f7] font-mono leading-relaxed">
+                              <span className="font-bold text-[#0071e3] block mb-0.5">Cláusula Modelo para Enmienda:</span>
+                              "{clause.suggestedDrafting}"
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -552,10 +539,32 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
                     Severidad: {risk.severity}
                   </span>
                 </div>
+                {(risk.exactLocation || risk.legalReference) && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {risk.exactLocation && (
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-500/10 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 text-xs font-semibold">
+                        <Search className="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                        <span>Revisar con Lupa:</span>
+                        <span className="font-bold underline">{risk.exactLocation}</span>
+                      </div>
+                    )}
+                    {risk.legalReference && (
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/[0.03] dark:bg-white/[0.06] text-[#86868b] text-[11px] font-mono">
+                        <Scale className="w-3 h-3 text-[#0071e3]" />
+                        <span>{risk.legalReference}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {risk.quoteSnippet && (
+                  <div className="p-3 rounded-2xl bg-black/[0.02] dark:bg-black/40 border border-black/[0.04] dark:border-white/[0.06] text-xs font-mono italic text-[#1d1d1f] dark:text-[#f5f5f7]">
+                    "{risk.quoteSnippet}"
+                  </div>
+                )}
                 <p className="text-xs sm:text-sm text-[#86868b] leading-relaxed">
                   {risk.description}
                 </p>
-                <div className="p-3 rounded-xl bg-emerald-50/40 dark:bg-emerald-950/30 border border-emerald-200/50 dark:border-emerald-900/40 flex items-start gap-2 text-xs">
+                <div className="p-3.5 rounded-2xl bg-emerald-50/40 dark:bg-emerald-950/30 border border-emerald-200/50 dark:border-emerald-900/40 flex items-start gap-2.5 text-xs">
                   <Check className="w-4 h-4 text-[#34c759] shrink-0 mt-0.5" />
                   <div>
                     <span className="font-semibold text-emerald-900 dark:text-emerald-300">Medida Preventiva / Mitigación: </span>

@@ -163,7 +163,7 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
           : ruleScoring.total_score || 45;
       const compliance = Math.max(5, Math.min(100, 100 - overallRisk));
 
-      // Extraer cláusulas reales mapeadas
+      // Extraer cláusulas reales mapeadas con citas precisas y ubicaciones para revisión con lupa
       const mappedClauses: AuditedClause[] = [];
 
       // 1. Cláusulas críticas identificadas por Llama 3.1 con citas textuales reales
@@ -175,6 +175,8 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
           Responsabilidad: 'responsabilidad',
           Privacidad: 'confidencialidad',
           Jurisdiccion: 'jurisdiccion',
+          AML: 'otros',
+          Anticorrupcion: 'otros',
         };
 
         const sevMap: Record<string, RiskSeverity> = {
@@ -183,40 +185,58 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
           BAJO: 'medium',
         };
 
+        const location = c.ubicacion_exacta || (c.tipo ? `Cláusula de ${c.tipo} / Sección Operativa` : 'Revisión en el texto del contrato');
+        const quote = c.cita_textual && c.cita_textual !== 'Cita textual analizada en el contrato.'
+          ? c.cita_textual
+          : 'Texto específico analizado en las estipulaciones del documento.';
+
         mappedClauses.push({
           id: `clause-llm-${idx + 1}`,
-          title: `[Llama 3.1] ${c.tipo || 'Cláusula Crítica'}: ${
+          title: `[Auditoría] ${c.tipo || 'Cláusula Crítica'}: ${
             c.explicacion_riesgo
-              ? c.explicacion_riesgo.substring(0, 60) + '...'
+              ? c.explicacion_riesgo.substring(0, 65) + '...'
               : 'Riesgo Detectado'
           }`,
-          originalSnippet: c.cita_textual || 'Cita textual analizada en el contrato.',
+          exactLocation: location,
+          originalSnippet: quote,
           category: catMap[c.tipo] || 'otros',
           riskLevel: sevMap[c.severidad] || 'high',
           finding:
             c.explicacion_riesgo ||
             'Contingencia contractual identificada por el motor de inferencia semántica.',
+          legalReference: c.fundamento_normativo || 'Estatuto de Contratación Mercantil y Buenas Prácticas',
           recommendation:
             c.recomendacion_negociacion ||
             'Negociar enmienda formal de salvaguarda con la contraparte.',
+          suggestedDrafting: c.redaccion_sugerida || (c.tipo ? `Se estipula que en caso de controversia sobre ${c.tipo}, las partes ajustarán sus obligaciones conforme a los principios de buena fe y reciprocidad económica.` : undefined),
           compliant: false,
         });
       });
 
-      // 2. Hallazgos regulatorios del motor determinístico (RGPD, SARLAFT, anticorrupción)
+      // 2. Hallazgos regulatorios del motor determinístico (RGPD, SARLAFT, anticorrupción, ISO 27001)
       ruleFindings.forEach((rf: any, idx: number) => {
+        const isOmission = !rf.matched_snippet;
+        const locationText = isOmission
+          ? `[CONTROL OMITIDO] Sección ausente: Requiere inserción en acápite de ${rf.category || 'Cumplimiento Normativo'}`
+          : rf.chunk_index !== undefined
+          ? `Párrafo / Numeral ${rf.chunk_index + 1} del contrato`
+          : 'Estipulación identificada en el cuerpo del contrato';
+
+        const quoteText = isOmission
+          ? `[AUSENCIA NORMATIVA] El contrato no contiene ninguna disposición relativa a ${rf.title}. Se requiere incorporar la cláusula antes de la firma para evitar contingencias legales.`
+          : rf.matched_snippet;
+
         mappedClauses.push({
           id: `clause-rule-${idx + 1}`,
           title: `[Regulación] ${rf.rule_code || 'Control'}: ${rf.description}`,
-          originalSnippet:
-            rf.matched_snippet || 'Detectado por patrón normativo en el texto del contrato.',
+          exactLocation: locationText,
+          originalSnippet: quoteText,
           category: (rf.category?.toLowerCase() as ClauseCategory) || 'penalizaciones',
           riskLevel: rf.risk_weight > 20 ? 'critical' : rf.risk_weight > 10 ? 'high' : 'medium',
-          finding: `${rf.description} (Referencia legal: ${
-            rf.legal_reference || 'Marco normativo corporativo'
-          })`,
-          recommendation:
-            'Alinear la redacción al marco normativo vigente para mitigar riesgos legales o regulatorios.',
+          finding: `${rf.description}`,
+          legalReference: rf.legal_reference || 'Marco normativo corporativo aplicable',
+          recommendation: rf.remediation || 'Alinear la redacción al marco normativo vigente para mitigar riesgos legales o regulatorios.',
+          suggestedDrafting: rf.suggested_clause || undefined,
           compliant: false,
         });
       });
@@ -227,23 +247,57 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
         mappedRisks.push({
           title: `Riesgo Contractual: ${c.tipo || 'Cláusula Crítica'}`,
           severity: c.severidad === 'ALTO' ? 'critical' : 'high',
+          exactLocation: c.ubicacion_exacta || `Cláusula de ${c.tipo || 'Contrato'}`,
+          quoteSnippet: c.cita_textual,
           description: c.explicacion_riesgo || 'Riesgo de asimetría o penalidad excesiva.',
+          legalReference: c.fundamento_normativo || 'Régimen de Obligaciones Mercantiles',
           mitigation: c.recomendacion_negociacion || 'Solicitar adenda previa firma.',
+          suggestedDrafting: c.redaccion_sugerida,
         });
       });
 
       ruleFindings.forEach((rf: any) => {
+        const isOmission = !rf.matched_snippet;
         mappedRisks.push({
-          title: `Vulnerabilidad Normativa: ${rf.rule_code}`,
+          title: `Vulnerabilidad Normativa: ${rf.rule_code || 'Regulación'}`,
           severity: rf.risk_weight > 20 ? 'critical' : 'high',
+          exactLocation: isOmission
+            ? `[Omisión] Acápite de ${rf.category || 'Cumplimiento'}`
+            : rf.chunk_index !== undefined ? `Párrafo ${rf.chunk_index + 1}` : 'Texto del contrato',
+          quoteSnippet: rf.matched_snippet || undefined,
           description: rf.description,
-          mitigation: `Aplicar control según ${rf.legal_reference || 'normativa aplicable'}.`,
+          legalReference: rf.legal_reference || 'Normativa aplicable',
+          mitigation: rf.remediation || `Aplicar control según ${rf.legal_reference || 'normativa aplicable'}.`,
         });
       });
 
       // Título limpio y legible derivado del archivo real
       const cleanTitle = uploadFileName.replace(/\.[^/.]+$/, '').replace(/_/g, ' ');
       const cleanTitleFormatted = cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1);
+
+      // Generar Dictamen y Resumen Ejecutivo Detallado (Objeto, partes, economía y diagnóstico legal)
+      const generateDetailedSummary = (): string => {
+        if (aiLlm.resumen_ejecutivo && aiLlm.resumen_ejecutivo.length > 80 && !aiLlm.resumen_ejecutivo.includes('Llama 3.1')) {
+          return aiLlm.resumen_ejecutivo;
+        }
+
+        const riskEvaluation = overallRisk > 60
+          ? 'Nivel de Riesgo Alto / Crítico (se desaconseja firma sin adenda previa)'
+          : overallRisk > 35
+          ? 'Nivel de Riesgo Moderado (requiere enmiendas de salvaguarda y ajuste normativo)'
+          : 'Nivel de Riesgo Bajo / Conforme a estándares de la organización';
+
+        const totalPoints = ruleFindings.length + criticalClauses.length;
+
+        return `1. OBJETO Y ALCANCE DEL CONTRATO:
+El presente instrumento (${cleanTitleFormatted}) corresponde a un acuerdo comercial y legal celebrado con el propósito de fijar las obligaciones operativas, facultades y compromisos entre las partes. Su estructura define el marco de prestación, términos de vigencia y parámetros de ejecución técnica y comercial.
+
+2. EVALUACIÓN FORENSE DE RIESGOS:
+El documento presenta un ${riskEvaluation}, obteniendo un índice de cumplimiento normativo del ${compliance}% frente a los estándares regulatorios aplicables. Se identificaron ${totalPoints} puntos clave que exigen revisión jurídica con lupa, principalmente en asimetrías de penalización, limitaciones de responsabilidad y omisiones en cláusulas obligatorias de cumplimiento.
+
+3. DICTAMEN LEGAL Y RECOMENDACIÓN ESTRATÉGICA:
+Se recomienda formalizar una Adenda de Modificación que incorpore las cláusulas omitidas de protección de datos, prevención de riesgos y resolución equitativa, subsanando los hallazgos críticos detallados en este informe previo al perfeccionamiento del contrato.`;
+      };
 
       const newAudit: ContractAudit = {
         id: `aud-${Date.now()}`,
@@ -266,27 +320,14 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
         complianceScore: compliance,
         status: overallRisk > 70 ? 'en_revision' : overallRisk > 40 ? 'auditado' : 'aprobado',
         auditedBy: currentUserEmail,
-        summary:
-          aiLlm.resumen_ejecutivo ||
-          'Auditoría completada exitosamente por el motor de inteligencia de Audiflow.',
+        summary: generateDetailedSummary(),
         parties: [
           { name: 'Entidad Contratante (Cliente)', role: 'Parte Contratante' },
           { name: 'Empresa Prestadora / Proveedora', role: 'Contraparte' },
         ],
         clauses: mappedClauses,
         risksIdentified: mappedRisks,
-        keyDeadlines: [
-          {
-            id: `dl-${Date.now()}-1`,
-            date: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString().split('T')[0],
-            title: 'Plazo para Emisión de Observaciones y Enmiendas Legales',
-            daysRemaining: 30,
-            urgency: overallRisk > 70 ? 'urgent' : 'warning',
-            description:
-              'Vence el plazo para objetar cláusulas lesivas antes del perfeccionamiento del contrato.',
-            contractTitle: cleanTitleFormatted,
-          },
-        ],
+        keyDeadlines: [],
         missingEssentialClauses:
           ruleScoring.missing_controls && ruleScoring.missing_controls.length > 0
             ? ruleScoring.missing_controls

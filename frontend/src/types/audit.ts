@@ -25,6 +25,9 @@ export interface AuditedClause {
   finding: string;
   recommendation: string;
   compliant: boolean;
+  exactLocation?: string;
+  legalReference?: string;
+  suggestedDrafting?: string;
 }
 
 export interface RiskItem {
@@ -32,6 +35,10 @@ export interface RiskItem {
   severity: RiskSeverity;
   description: string;
   mitigation: string;
+  exactLocation?: string;
+  legalReference?: string;
+  quoteSnippet?: string;
+  suggestedDrafting?: string;
 }
 
 export interface KeyDeadline {

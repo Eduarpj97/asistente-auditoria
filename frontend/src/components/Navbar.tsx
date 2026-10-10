@@ -421,20 +421,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         </div>
                       </div>
 
-                      {/* Documentación Normativa */}
-                      <a
-                        href="https://audiflow-audit.abbynex.site/normativas/normativa_auditoria_vigente_2026.md"
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={() => setIsProfileOpen(false)}
-                        className="w-full text-left px-3 py-2 text-xs text-[#86868b] hover:text-[#0071e3] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] rounded-xl font-medium flex items-center gap-2.5 cursor-pointer transition-colors"
-                      >
-                        <div className="w-7 h-7 rounded-full bg-black/[0.04] dark:bg-white/[0.08] text-[#86868b] flex items-center justify-center shrink-0">
-                          <FileCheck className="w-3.5 h-3.5" />
-                        </div>
-                        <span>Normativas Vigentes 2026 (.md)</span>
-                      </a>
-                    </div>
+                      </div>
 
                     {/* 4. Cerrar Sesión */}
                     <div className="border-t border-black/[0.06] dark:border-white/[0.08] p-1.5">
