@@ -108,10 +108,16 @@ def init_sqlite_db():
             password_hash TEXT NOT NULL,
             empresa TEXT DEFAULT 'Firma de Auditoría',
             rol TEXT DEFAULT 'Auditor Legal Senior',
+            avatar_url TEXT DEFAULT '',
             activo INTEGER DEFAULT 1,
             creado_en DATETIME DEFAULT CURRENT_TIMESTAMP
         )
         """)
+        # Migración segura: agregar columna avatar_url si la tabla fue creada previamente
+        try:
+            c.execute("ALTER TABLE usuarios ADD COLUMN avatar_url TEXT DEFAULT ''")
+        except Exception:
+            pass
         c.execute("""
         CREATE TABLE IF NOT EXISTS auditorias_sync (
             id_audit TEXT NOT NULL,
@@ -192,14 +198,14 @@ def db_authenticate_user(email: str, password: str) -> Dict[str, Any]:
     try:
         conn = get_sqlite_conn()
         c = conn.cursor()
-        c.execute("SELECT id_usuario, nombre, email, password_hash, empresa, rol, activo FROM usuarios WHERE LOWER(email) = ?", (norm_email,))
+        c.execute("SELECT id_usuario, nombre, email, password_hash, empresa, rol, avatar_url, activo FROM usuarios WHERE LOWER(email) = ?", (norm_email,))
         row = c.fetchone()
         conn.close()
         
         if not row:
             return {"success": False, "error": "No se encontró ninguna cuenta registrada con este correo electrónico. Por favor regístrate."}
         
-        user_id, nombre, u_email, stored_hash, empresa, rol, activo = row
+        user_id, nombre, u_email, stored_hash, empresa, rol, avatar_url, activo = row
         if stored_hash != pwd_hash:
             return {"success": False, "error": "Contraseña incorrecta. Por favor verifica tus credenciales."}
         
@@ -210,11 +216,98 @@ def db_authenticate_user(email: str, password: str) -> Dict[str, Any]:
                 "name": nombre,
                 "email": u_email,
                 "company": empresa,
-                "role": rol
+                "role": rol,
+                "avatarUrl": avatar_url or ""
             }
         }
     except Exception as e:
         return {"success": False, "error": f"Error al autenticar: {str(e)}"}
+
+def db_update_user_profile(email: str, name: str, role: str, company: Optional[str] = None, avatar_url: Optional[str] = None) -> Dict[str, Any]:
+    """Actualiza el perfil de un usuario en SQLite y Supabase garantizando persistencia multidispositivo."""
+    norm_email = email.strip().lower()
+    clean_name = name.strip()
+    clean_role = role.strip()
+    
+    try:
+        conn = get_sqlite_conn()
+        c = conn.cursor()
+        c.execute("SELECT id_usuario, empresa, avatar_url FROM usuarios WHERE LOWER(email) = ?", (norm_email,))
+        row = c.fetchone()
+        if not row:
+            conn.close()
+            return {"success": False, "error": "Usuario no encontrado."}
+        
+        user_id, current_company, current_avatar = row
+        final_company = company.strip() if company else current_company
+        final_avatar = avatar_url if avatar_url is not None else (current_avatar or "")
+        
+        c.execute("""
+        UPDATE usuarios
+        SET nombre = ?, rol = ?, empresa = ?, avatar_url = ?
+        WHERE LOWER(email) = ?
+        """, (clean_name, clean_role, final_company, final_avatar, norm_email))
+        conn.commit()
+        conn.close()
+        
+        # Dual-write a Supabase
+        if supabase:
+            try:
+                update_payload: Dict[str, Any] = {
+                    "nombre": clean_name,
+                    "rol": clean_role,
+                    "empresa": final_company,
+                }
+                supabase.table("usuarios").update(update_payload).eq("email", norm_email).execute()
+            except Exception as se:
+                print(f"[Supabase Sync Notice] Perfil actualizado en SQLite (Supabase en espera: {se})")
+        
+        return {
+            "success": True,
+            "user": {
+                "id": user_id,
+                "name": clean_name,
+                "email": norm_email,
+                "company": final_company,
+                "role": clean_role,
+                "avatarUrl": final_avatar
+            }
+        }
+    except Exception as e:
+        return {"success": False, "error": f"Error actualizando perfil: {str(e)}"}
+
+def db_change_user_password(email: str, current_password: str, new_password: str) -> Dict[str, Any]:
+    """Cambia la contraseña del usuario en SQLite y Supabase."""
+    norm_email = email.strip().lower()
+    curr_hash = hash_password(current_password)
+    new_hash = hash_password(new_password)
+    
+    try:
+        conn = get_sqlite_conn()
+        c = conn.cursor()
+        c.execute("SELECT password_hash FROM usuarios WHERE LOWER(email) = ?", (norm_email,))
+        row = c.fetchone()
+        if not row:
+            conn.close()
+            return {"success": False, "error": "Usuario no encontrado."}
+        
+        if row[0] != curr_hash:
+            conn.close()
+            return {"success": False, "error": "La contraseña actual no coincide."}
+        
+        c.execute("UPDATE usuarios SET password_hash = ? WHERE LOWER(email) = ?", (new_hash, norm_email))
+        conn.commit()
+        conn.close()
+        
+        if supabase:
+            try:
+                supabase.table("usuarios").update({"password_hash": new_hash}).eq("email", norm_email).execute()
+            except Exception as se:
+                print(f"[Supabase Sync Notice] Password actualizado en SQLite (Supabase: {se})")
+        
+        return {"success": True, "message": "Contraseña actualizada exitosamente."}
+    except Exception as e:
+        return {"success": False, "error": f"Error cambiando contraseña: {str(e)}"}
 
 def seed_default_admin():
     """Garantiza que la cuenta de Eduardo Pedroza esté siempre registrada y lista para ingresar desde cualquier dispositivo."""

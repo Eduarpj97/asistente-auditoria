@@ -120,8 +120,21 @@ class AuthUser(BaseModel):
     email: str
     company: str
     role: str
+    avatarUrl: Optional[str] = None
 
 class AuthResponse(BaseModel):
     success: bool
     user: Optional[AuthUser] = None
     error: Optional[str] = None
+
+class UpdateProfileRequest(BaseModel):
+    email: str = Field(..., description="Correo del usuario a actualizar")
+    name: str = Field(..., min_length=2, description="Nombre completo")
+    role: str = Field(..., min_length=2, description="Cargo o rol")
+    company: Optional[str] = Field(None, description="Empresa")
+    avatarUrl: Optional[str] = Field(None, description="Foto o avatar en Base64 o URL")
+
+class ChangePasswordRequest(BaseModel):
+    email: str = Field(..., description="Correo del usuario")
+    current_password: str = Field(..., description="Contraseña actual")
+    new_password: str = Field(..., min_length=6, description="Nueva contraseña")

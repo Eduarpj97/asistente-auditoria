@@ -369,31 +369,47 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                       Cargo o Rol
                     </label>
                     <div className="relative">
-                      <Briefcase className="w-4 h-4 text-[#86868b] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
+                      <Briefcase className="w-4 h-4 text-[#86868b] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <select
                         required
                         value={role}
                         onChange={(e) => setRole(e.target.value)}
-                        placeholder="Ej. Auditor Legal Senior"
-                        className="w-full pl-10 pr-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-black/[0.06] dark:border-white/[0.1] bg-black/[0.02] dark:bg-white/[0.04] text-[#1d1d1f] dark:text-[#f5f5f7] focus:outline-none focus:border-[#0071e3] focus:bg-white dark:focus:bg-[#1c1c1e] transition"
-                      />
+                        className="w-full pl-10 pr-8 py-2.5 text-xs sm:text-sm rounded-xl border border-black/[0.06] dark:border-white/[0.1] bg-black/[0.02] dark:bg-white/[0.04] text-[#1d1d1f] dark:text-[#f5f5f7] focus:outline-none focus:border-[#0071e3] focus:bg-white dark:focus:bg-[#1c1c1e] transition cursor-pointer appearance-none"
+                      >
+                        <option value="Auditor Legal Senior" className="dark:bg-[#1c1c1e]">Auditor Legal Senior</option>
+                        <option value="Director de Control Interno" className="dark:bg-[#1c1c1e]">Director de Control Interno</option>
+                        <option value="Oficial de Cumplimiento (Compliance)" className="dark:bg-[#1c1c1e]">Oficial de Cumplimiento (Compliance)</option>
+                        <option value="Abogado Corporativo" className="dark:bg-[#1c1c1e]">Abogado Corporativo</option>
+                        <option value="Analista de Riesgos Contractuales" className="dark:bg-[#1c1c1e]">Analista de Riesgos Contractuales</option>
+                        <option value="Auditor Junior" className="dark:bg-[#1c1c1e]">Auditor Junior</option>
+                        <option value="Gerente Legal y Regulatorio" className="dark:bg-[#1c1c1e]">Gerente Legal y Regulatorio</option>
+                      </select>
+                      <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-[#86868b]">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-[#1d1d1f] dark:text-[#f5f5f7] mb-1">
-                      Empresa u Organización
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-medium text-[#1d1d1f] dark:text-[#f5f5f7]">
+                        Empresa u Organización
+                      </label>
+                      <span className="text-[10px] text-[#86868b] flex items-center gap-1">
+                        <Lock className="w-2.5 h-2.5 text-[#86868b]" /> Bloqueado
+                      </span>
+                    </div>
                     <div className="relative">
                       <Building className="w-4 h-4 text-[#86868b] absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <input
                         type="text"
-                        required
+                        disabled
+                        readOnly
                         value={company}
-                        onChange={(e) => setCompany(e.target.value)}
-                        placeholder="Ej. Firma de Auditoría"
-                        className="w-full pl-10 pr-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-black/[0.06] dark:border-white/[0.1] bg-black/[0.02] dark:bg-white/[0.04] text-[#1d1d1f] dark:text-[#f5f5f7] focus:outline-none focus:border-[#0071e3] focus:bg-white dark:focus:bg-[#1c1c1e] transition"
+                        title="La organización corporativa asignada no puede ser modificada"
+                        className="w-full pl-10 pr-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-black/[0.06] dark:border-white/[0.1] bg-black/[0.05] dark:bg-white/[0.03] text-[#86868b] cursor-not-allowed select-none opacity-85"
                       />
                     </div>
                   </div>

@@ -156,16 +156,22 @@ export async function updateUserProfile(params: {
         avatarUrl: params.avatarUrl || '',
       };
 
-  // Guardar de inmediato en almacenamiento local/sesión
+  // Guardar inmediatamente en sesión local para reactividad instantánea
   const isLocal = !!localStorage.getItem(SESSION_KEY);
   saveActiveSession(updatedUser, isLocal);
 
-  // Intentar sincronizar con el backend si el endpoint está disponible
+  // Sincronizar OBLIGATORIAMENTE con el servidor central para persistencia multidispositivo
   try {
     const res = await fetch(getAuthEndpoint('profile'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(params),
+      body: JSON.stringify({
+        email: params.email,
+        name: params.name,
+        role: params.role,
+        company: params.company,
+        avatarUrl: params.avatarUrl,
+      }),
     });
     if (res.ok) {
       const data = await res.json();
@@ -173,9 +179,12 @@ export async function updateUserProfile(params: {
         saveActiveSession(data.user, isLocal);
         return { success: true, user: data.user };
       }
+    } else {
+      const errData = await res.json().catch(() => ({}));
+      return { success: false, error: errData.detail || 'Error al guardar cambios en el servidor central.' };
     }
   } catch (err) {
-    // No bloquea la experiencia si el backend no cuenta con la ruta
+    console.warn('[Audiflow Auth] Perfil guardado localmente (servidor no disponible):', err);
   }
 
   return { success: true, user: updatedUser };

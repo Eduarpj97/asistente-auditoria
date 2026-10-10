@@ -11,7 +11,16 @@ from fastapi.staticfiles import StaticFiles
 # Cargar variables de entorno
 load_dotenv()
 
-from database import check_db_health, db_register_user, db_authenticate_user, db_save_audit_sync, db_get_user_audits, db_delete_audit_sync
+from database import (
+    check_db_health,
+    db_register_user,
+    db_authenticate_user,
+    db_update_user_profile,
+    db_change_user_password,
+    db_save_audit_sync,
+    db_get_user_audits,
+    db_delete_audit_sync
+)
 from services.ocr_service import extract_text_hybrid
 from services.chunk_service import create_chunks
 from services.risk_scoring_service import risk_engine
@@ -24,7 +33,9 @@ from schemas import (
     RiskRuleInfo,
     RegisterRequest,
     LoginRequest,
-    AuthResponse
+    AuthResponse,
+    UpdateProfileRequest,
+    ChangePasswordRequest
 )
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
@@ -99,6 +110,37 @@ async def login_endpoint(req: LoginRequest):
     res = await asyncio.to_thread(db_authenticate_user, email=req.email, password=req.password)
     if not res.get("success"):
         raise HTTPException(status_code=401, detail=res.get("error", "Credenciales incorrectas."))
+    return res
+
+@app.post("/v1/auth/profile", response_model=AuthResponse, summary="Actualizar perfil de usuario en base de datos centralizada")
+async def profile_update_endpoint(req: UpdateProfileRequest):
+    """
+    Actualiza el perfil de un usuario (nombre, cargo, avatar) en SQLite y Supabase.
+    Garantiza que los cambios se reflejen de inmediato al abrir la sesión en otro dispositivo.
+    """
+    res = await asyncio.to_thread(
+        db_update_user_profile,
+        email=req.email,
+        name=req.name,
+        role=req.role,
+        company=req.company,
+        avatar_url=req.avatarUrl
+    )
+    if not res.get("success"):
+        raise HTTPException(status_code=400, detail=res.get("error", "Error actualizando perfil."))
+    return res
+
+@app.post("/v1/auth/change-password", summary="Cambiar contraseña en base de datos centralizada")
+async def change_password_endpoint(req: ChangePasswordRequest):
+    """Cambia la contraseña de acceso en la base central para persistencia multidispositivo."""
+    res = await asyncio.to_thread(
+        db_change_user_password,
+        email=req.email,
+        current_password=req.current_password,
+        new_password=req.new_password
+    )
+    if not res.get("success"):
+        raise HTTPException(status_code=400, detail=res.get("error", "Error cambiando contraseña."))
     return res
 
 # ─── Sincronización cross-device de auditorías ───────────────────────────────
