@@ -156,12 +156,14 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
       const criticalClauses = aiLlm.clausulas_criticas || [];
       const ruleFindings = ruleScoring.findings || [];
 
-      // Calcular scores reales del documento analizado
-      const overallRisk =
-        aiLlm.score_riesgo_ia !== undefined && aiLlm.score_riesgo_ia > 0
-          ? aiLlm.score_riesgo_ia
-          : ruleScoring.total_score || 45;
-      const compliance = Math.max(5, Math.min(100, 100 - overallRisk));
+      // Calcular scores REALES del documento analizado (sin simulación)
+      // El backend retorna global_score (no total_score) en rule_scoring
+      const ruleEngineScore = typeof ruleScoring.global_score === 'number' ? ruleScoring.global_score : 0;
+      const iaScore = typeof aiLlm.score_riesgo_ia === 'number' ? aiLlm.score_riesgo_ia : 0;
+
+      // Priorizar IA si respondió, si no usar motor de reglas. NUNCA simular.
+      const overallRisk = iaScore > 0 ? iaScore : ruleEngineScore;
+      const compliance = Math.max(0, Math.min(100, 100 - overallRisk));
 
       // Extraer cláusulas reales mapeadas con citas precisas y ubicaciones para revisión con lupa
       const mappedClauses: AuditedClause[] = [];
@@ -231,15 +233,14 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
 
         mappedClauses.push({
           id: `clause-rule-${idx + 1}`,
-          title: `[Regulación] ${rf.rule_code || 'Control'}: ${rf.description}`,
+          title: `[Regulación] ${rf.rule_id || 'Control'}: ${rf.description}`,
           exactLocation: locationText,
           originalSnippet: quoteText,
           category: (rf.category?.toLowerCase() as ClauseCategory) || 'penalizaciones',
-          riskLevel: rf.risk_weight > 20 ? 'critical' : rf.risk_weight > 10 ? 'high' : 'medium',
+          riskLevel: rf.score_impact > 20 ? 'critical' : rf.score_impact > 10 ? 'high' : 'medium',
           finding: `${rf.description}`,
-          legalReference: rf.legal_reference || 'Marco normativo corporativo aplicable',
+          legalReference: rf.normative_reference || 'Marco normativo corporativo aplicable',
           recommendation: rf.remediation || 'Alinear la redacción al marco normativo vigente para mitigar riesgos legales o regulatorios.',
-          suggestedDrafting: rf.suggested_clause || undefined,
           compliant: false,
         });
       });
@@ -267,15 +268,15 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
       ruleFindings.forEach((rf: any) => {
         const isOmission = !rf.matched_snippet;
         mappedRisks.push({
-          title: `Vulnerabilidad Normativa: ${rf.rule_code || 'Regulación'}`,
-          severity: rf.risk_weight > 20 ? 'critical' : 'high',
+          title: `Vulnerabilidad Normativa: ${rf.rule_id || 'Regulación'}`,
+          severity: rf.score_impact > 20 ? 'critical' : 'high',
           exactLocation: isOmission
             ? `[Omisión] Sección ausente en documento: Acápite de ${rf.category || 'Cumplimiento'}`
             : rf.chunk_index !== undefined ? `Párrafo ${rf.chunk_index + 1} del documento original` : 'Texto del documento original',
           quoteSnippet: rf.matched_snippet || undefined,
           description: rf.description,
-          legalReference: rf.legal_reference || 'Normativa aplicable',
-          mitigation: rf.remediation || `Recomendación Legal: Incorporar cláusula de salvaguarda según ${rf.legal_reference || 'normativa aplicable'}.`,
+          legalReference: rf.normative_reference || 'Normativa aplicable',
+          mitigation: rf.remediation || `Recomendación Legal: Incorporar cláusula de salvaguarda según ${rf.normative_reference || 'normativa aplicable'}.`,
         });
       });
 
@@ -283,13 +284,15 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
       const cleanTitle = uploadFileName.replace(/\.[^/.]+$/, '').replace(/_/g, ' ');
       const cleanTitleFormatted = cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1);
 
-      // Generar Resumen sobre de qué trata y habla el documento (sin objetivos ni diagnóstico)
+      // Generar Resumen en lenguaje simple sobre de qué trata el documento
       const generateDetailedSummary = (): string => {
+        // Si la IA generó un buen resumen, usarlo directamente
         if (aiLlm.resumen_ejecutivo && aiLlm.resumen_ejecutivo.length > 50 && !aiLlm.resumen_ejecutivo.includes('Llama 3.1') && !aiLlm.resumen_ejecutivo.includes('1. OBJETO')) {
           return aiLlm.resumen_ejecutivo;
         }
 
-        return `Este documento (${cleanTitleFormatted}) corresponde a un acuerdo comercial y contractual celebrado para regular la relación operativa y económica entre las partes. En su contenido se establecen las condiciones de prestación de servicios o provisión comercial, el régimen de pagos, las facultades de ejecución, las directrices de confidencialidad y los términos de vigencia aplicables a la relación negocial.`;
+        // Fallback: resumen básico en lenguaje simple basado en el nombre del archivo
+        return `Este documento (${cleanTitleFormatted}) es un acuerdo entre dos o más partes que establece las condiciones bajo las cuales se van a prestar servicios, entregar productos o cumplir compromisos comerciales. En él se definen los derechos y obligaciones de cada parte, las formas de pago, los plazos de ejecución, las reglas de confidencialidad y las consecuencias en caso de incumplimiento.`;
       };
 
       const newAudit: ContractAudit = {

@@ -140,7 +140,7 @@ class LLMAuditService:
                 pass
 
         default_summary = (
-            "El presente documento corresponde a un acuerdo comercial y operativo celebrado entre las partes para regular la prestación de servicios, términos de ejecución técnica, niveles operativos y condiciones de contraprestación económica en el marco del negocio convenido."
+            "Este documento es un acuerdo entre dos o más partes donde se definen las condiciones para prestar un servicio, entregar un producto o cumplir compromisos comerciales. Incluye las obligaciones de cada quien, las formas de pago, los plazos y las consecuencias si alguna de las partes no cumple."
         )
 
         return {
@@ -204,7 +204,7 @@ class LLMAuditService:
             "Evalúa el contrato aplicando RIGUROSAMENTE las siguientes normativas y buenas prácticas:\n"
             f"{normativas_ref}\n\n"
             "INSTRUCCIONES CLAVE:\n"
-            "1. En 'resumen_ejecutivo', explica DE QUÉ TRATA EL DOCUMENTO de forma clara, directa y comprensible (ej. tipo de acuerdo, servicios o productos pactados, obligaciones centrales entre las partes y alcance). NO incluyas listas de objetivos ni diagnósticos formales en esta sección, solo describe de qué habla el contrato.\n"
+            "1. En 'resumen_ejecutivo', escribe en LENGUAJE SIMPLE Y COTIDIANO de qué se trata el documento: qué se está contratando, quién le presta el servicio a quién, qué tipo de producto o servicio se ofrece y cuáles son las condiciones principales. Escríbelo como si se lo explicaras a alguien que no es abogado. NO uses numerales, listas formales ni diagnósticos.\n"
             "2. En 'clausulas_criticas', identifica estipulaciones riesgosas del documento original (penalidades excesivas, responsabilidad asimétrica, cláusulas abusivas, omisión de Habeas Data o AML) y para CADA UNA cita exactamente el documento original para sustentar el riesgo y emitir la recomendación legal correspondiente:\n"
             "   - 'tipo': Categoría jurídica (ej. Responsabilidad, Penalidad, Privacidad, AML, SLA, Terminación).\n"
             "   - 'severidad': ALTO | MEDIO | BAJO.\n"
@@ -284,9 +284,9 @@ class LLMAuditService:
         except Exception as e:
             print(f"[LLMAuditService] Excepción de conexión con Ollama: {e}")
 
-        # Fallback inteligente y descriptivo: el informe de auditoría se mantiene íntegro
+        # Fallback cuando Ollama está offline: resumen genérico en lenguaje simple
         fallback_summary = (
-            "El documento corresponde a un contrato y acuerdo legal que establece las obligaciones, términos de prestación, facultades y compromisos operativos y comerciales entre las partes contratantes."
+            "Este documento es un acuerdo legal entre dos o más partes que define las condiciones del servicio o negocio pactado, incluyendo obligaciones, pagos, plazos y responsabilidades de cada parte involucrada."
         )
 
         return {
