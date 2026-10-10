@@ -192,7 +192,7 @@ class LLMAuditService:
             "- EQUILIBRIO CONTRACTUAL: Nulidad absoluta de cláusulas que exoneren de responsabilidad por dolo o culpa grave. SLAs con compensación económica obligatoria.\n"
         )
 
-    def analyze_contract_semantics(self, contract_text: str, max_chars: int = 3500) -> Dict[str, Any]:
+    def analyze_contract_semantics(self, contract_text: str, max_chars: int = 2500) -> Dict[str, Any]:
         """
         Envía el contrato al modelo Llama 3.1 para auditoría semántica profunda aplicando las normativas 2026.
         """
@@ -200,42 +200,29 @@ class LLMAuditService:
         normativas_ref = self.get_normativa_2026_summary()
 
         system_prompt = (
-            "Eres Audiflow, una herramienta profesional de auditoría legal y análisis pericial de contratos. "
-            "Evalúa el contrato aplicando RIGUROSAMENTE las siguientes normativas y buenas prácticas:\n"
-            f"{normativas_ref}\n\n"
+            "Eres Audiflow, un auditor legal de contratos e instrumentos jurídicos.\n"
             "INSTRUCCIONES CLAVE:\n"
-            "1. En 'resumen_ejecutivo', escribe en LENGUAJE SIMPLE Y COTIDIANO de qué se trata el documento: qué se está contratando, quién le presta el servicio a quién, qué tipo de producto o servicio se ofrece y cuáles son las condiciones principales. Escríbelo como si se lo explicaras a alguien que no es abogado. NO uses numerales, listas formales ni diagnósticos.\n"
-            "2. En 'clausulas_criticas', identifica estipulaciones riesgosas del documento original (penalidades excesivas, responsabilidad asimétrica, cláusulas abusivas, omisión de Habeas Data o AML) y para CADA UNA cita exactamente el documento original para sustentar el riesgo y emitir la recomendación legal correspondiente:\n"
-            "   - 'tipo': Categoría jurídica (ej. Responsabilidad, Penalidad, Privacidad, AML, SLA, Terminación).\n"
+            "1. En 'resumen_ejecutivo', explica en 2 o 3 oraciones en LENGUAJE SIMPLE Y COTIDIANO de qué se trata exactamente el documento analizado según su contenido real (ej. si es una matrícula de universidad, acuerdo de servicios, compraventa, etc., indicando las partes y el objeto). NO uses plantillas genéricas fijas ni numerales.\n"
+            "2. En 'clausulas_criticas', identifica 1 o 2 estipulaciones que contengan riesgos o asimetrías según las normativas vigentes (RGPD, AML, anticorrupción, penalidades desproporcionadas). Si el documento es un acuerdo simple o constancia sin cláusulas de riesgo, indica un score bajo (ej. 5 o 10) y deja 'clausulas_criticas' vacío.\n"
+            "Para cada cláusula crítica detectada indica:\n"
+            "   - 'tipo': Categoría jurídica.\n"
             "   - 'severidad': ALTO | MEDIO | BAJO.\n"
-            "   - 'ubicacion_exacta': Dónde revisar con lupa en el documento original (ej. 'Cláusula Quinta, Numeral 5.2', 'Cláusula Novena, Párrafo 2', o 'Sección ausente en el documento').\n"
-            "   - 'cita_textual': Fragmento literal exacto extraído del documento original donde radica el riesgo.\n"
-            "   - 'explicacion_riesgo': Explicación clara de por qué este punto específico genera riesgo.\n"
-            "   - 'fundamento_normativo': Norma, ley o estándar legal aplicable.\n"
-            "   - 'recomendacion_legal': Recomendación legal y preventiva específica ante este riesgo detectado.\n"
-            "   - 'redaccion_sugerida': Propuesta de redacción contractual equilibrada para incluir en una adenda.\n\n"
+            "   - 'ubicacion_exacta': Dónde se ubica en el documento.\n"
+            "   - 'cita_textual': Fragmento literal del documento original.\n"
+            "   - 'explicacion_riesgo': Por qué representa riesgo.\n"
+            "   - 'fundamento_normativo': Norma aplicable.\n"
+            "   - 'recomendacion_legal': Qué hacer para corregirlo.\n"
+            "   - 'redaccion_sugerida': Propuesta para adenda.\n\n"
             "Debes responder OBLIGATORIAMENTE en formato JSON válido con esta estructura:\n"
             "{\n"
             '  "score_riesgo_ia": <numero entero 0-100>,\n'
             '  "nivel_riesgo_ia": "<ALTO | MEDIO | BAJO>",\n'
-            '  "resumen_ejecutivo": "<resumen claro explicando de qué trata y habla el documento>",\n'
-            '  "clausulas_criticas": [\n'
-            '    {\n'
-            '      "tipo": "<tipo>",\n'
-            '      "severidad": "<ALTO | MEDIO | BAJO>",\n'
-            '      "ubicacion_exacta": "<dónde revisar con lupa>",\n'
-            '      "cita_textual": "<cita literal del documento original>",\n'
-            '      "explicacion_riesgo": "<detalle del riesgo>",\n'
-            '      "fundamento_normativo": "<normativa>",\n'
-            '      "recomendacion_legal": "<recomendación legal preventiva>",\n'
-            '      "redaccion_sugerida": "<redacción sugerida para adenda>"\n'
-            '    }\n'
-            '  ]\n'
-            "}\n"
-            "Identifica de 2 a 3 cláusulas críticas relevantes."
+            '  "resumen_ejecutivo": "<resumen específico en lenguaje simple de qué trata este documento>",\n'
+            '  "clausulas_criticas": []\n'
+            "}"
         )
 
-        user_prompt = f"Contrato a auditar:\n\n{sample_text}\n\nGenera el análisis JSON:"
+        user_prompt = f"Documento a auditar:\n\n{sample_text}\n\nGenera el JSON:"
 
         payload = {
             "model": self.model,
@@ -247,10 +234,10 @@ class LLMAuditService:
             "format": "json",
             "keep_alive": -1,
             "options": {
-                "temperature": 0.1,  # Máxima fidelidad y consistencia jurídica
-                "num_ctx": 2048,     # Contexto suficiente para contrato y análisis detallado
-                "num_predict": 700,  # Presupuesto para dictamen completo y citas
-                "num_thread": 3      # Rendimiento óptimo en CPU ARM Ampere A1
+                "temperature": 0.1,  # Fidelidad máxima
+                "num_ctx": 1536,     # Tamaño óptimo para procesar en CPU ARM
+                "num_predict": 350,  # Presupuesto conciso para respuesta rápida sin timeout (<45s)
+                "num_thread": 4      # Utilizar los 4 núcleos completos de la CPU ARM Ampere A1
             }
         }
 
@@ -263,7 +250,7 @@ class LLMAuditService:
                 headers={"Content-Type": "application/json; charset=utf-8"},
                 method="POST"
             )
-            with urllib.request.urlopen(req, timeout=180) as resp:
+            with urllib.request.urlopen(req, timeout=300) as resp:
                 if resp.status == 200:
                     raw_data = json.loads(resp.read().decode("utf-8"))
                     content = raw_data.get("message", {}).get("content", "{}")

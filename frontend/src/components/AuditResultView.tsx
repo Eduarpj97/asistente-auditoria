@@ -264,12 +264,12 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
         )}
       </div>
 
-      {/* Resumen del Documento */}
+      {/* Resumen Ejecutivo en Lenguaje Simple */}
       <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl p-6 sm:p-7 border border-black/[0.04] dark:border-white/[0.06] shadow-xs space-y-3">
         <div className="flex items-center justify-between pb-3 border-b border-black/[0.04] dark:border-white/[0.06]">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#0071e3] dark:text-[#2997ff]">
             <Sparkles className="w-4 h-4 text-[#0071e3]" />
-            <span>Resumen del Documento</span>
+            <span>Resumen Ejecutivo en Lenguaje Simple</span>
           </div>
           <span className="text-[11px] font-medium text-[#86868b] bg-black/[0.03] dark:bg-white/[0.06] px-2.5 py-0.5 rounded-full">
             Contenido y Alcance
