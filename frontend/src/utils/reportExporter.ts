@@ -2,6 +2,16 @@ import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, Headi
 import jsPDF from 'jspdf';
 import { ContractAudit } from '../types/audit';
 
+function translateSeverity(severity: string): string {
+  const map: Record<string, string> = {
+    critical: 'CRÍTICO',
+    high: 'ALTO',
+    medium: 'MEDIO',
+    low: 'BAJO',
+  };
+  return map[severity.toLowerCase()] || severity.toUpperCase();
+}
+
 export async function exportToWord(audit: ContractAudit): Promise<void> {
   const doc = new Document({
     sections: [
@@ -107,7 +117,7 @@ export async function exportToWord(audit: ContractAudit): Promise<void> {
                 children: [
                   new TextRun({ text: `${idx + 1}. ${risk.title} `, bold: true, size: 22, color: '0F2744' }),
                   new TextRun({
-                    text: `[Severidad: ${risk.severity.toUpperCase()}]`,
+                    text: `[Severidad: ${translateSeverity(risk.severity)}]`,
                     bold: true,
                     color: risk.severity === 'critical' ? 'C53030' : risk.severity === 'high' ? 'C53030' : 'D69E2E',
                   }),
@@ -195,7 +205,7 @@ export async function exportToWord(audit: ContractAudit): Promise<void> {
                 children: [
                   new TextRun({ text: `${idx + 1}. ${clause.title} `, bold: true, size: 22, color: '0F2744' }),
                   new TextRun({
-                    text: `(${clause.compliant ? 'CONFORME' : 'REQUIERE ATENCIÓN'} - RIESGO ${clause.riskLevel.toUpperCase()})`,
+                    text: `(${clause.compliant ? 'CONFORME' : 'REQUIERE ATENCIÓN'} - RIESGO ${translateSeverity(clause.riskLevel)})`,
                     bold: true,
                     color: clause.compliant ? '2F855A' : 'C53030',
                   }),
@@ -452,6 +462,9 @@ export function exportToPDF(audit: ContractAudit): void {
   y += 6;
 
   audit.risksIdentified.forEach((risk, i) => {
+    const sevLabel = translateSeverity(risk.severity);
+    const badgeText = `[SEVERIDAD: ${sevLabel}]`;
+    const titleLines = doc.splitTextToSize(`${i + 1}. ${risk.title}`, pageWidth - margin * 2 - 40);
     const descLines = doc.splitTextToSize(`Diagnóstico del Riesgo: ${risk.description}`, pageWidth - margin * 2 - 6);
     const mitLines = doc.splitTextToSize(`Recomendación Legal & Preventiva: ${risk.mitigation}`, pageWidth - margin * 2 - 6);
     const locLines = risk.exactLocation ? doc.splitTextToSize(`Revisar con Lupa en Documento: ${risk.exactLocation}`, pageWidth - margin * 2 - 6) : [];
@@ -459,14 +472,19 @@ export function exportToPDF(audit: ContractAudit): void {
     const legalLines = risk.legalReference ? doc.splitTextToSize(`Marco Normativo: ${risk.legalReference}`, pageWidth - margin * 2 - 6) : [];
     const draftLines = risk.suggestedDrafting ? doc.splitTextToSize(`Redacción Sugerida: "${risk.suggestedDrafting}"`, pageWidth - margin * 2 - 6) : [];
 
-    const totalHeight = descLines.length * 3.8 + mitLines.length * 3.8 + locLines.length * 3.8 + quoteLines.length * 3.5 + legalLines.length * 3.5 + draftLines.length * 3.5 + 14;
+    const headerHeight = Math.max(titleLines.length * 4.2, 5.5);
+    const totalHeight = headerHeight + descLines.length * 3.8 + mitLines.length * 3.8 + locLines.length * 3.8 + quoteLines.length * 3.5 + legalLines.length * 3.5 + draftLines.length * 3.5 + 14;
     checkPageBreak(totalHeight);
 
+    // Título a la izquierda ajustado
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     doc.setTextColor(197, 48, 48);
-    doc.text(`${i + 1}. ${risk.title} [Severidad: ${risk.severity.toUpperCase()}]`, margin, y);
-    y += 4;
+    doc.text(titleLines, margin, y);
+
+    // Badge de severidad alineado a la derecha sin tocar el título
+    doc.text(badgeText, pageWidth - margin, y, { align: 'right' });
+    y += headerHeight + 1.5;
 
     if (locLines.length > 0) {
       doc.setFont('helvetica', 'bold');
@@ -510,7 +528,7 @@ export function exportToPDF(audit: ContractAudit): void {
   });
   y += 4;
 
-  // Clauses Breakdown
+  // Clauses Breakdown (Revisión Forense sin acoplamiento ni textos en inglés)
   checkPageBreak(30);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
@@ -519,29 +537,32 @@ export function exportToPDF(audit: ContractAudit): void {
   y += 6;
 
   audit.clauses.forEach((clause, i) => {
+    const statusText = clause.compliant ? '[CONFORME]' : `[RIESGO ${translateSeverity(clause.riskLevel)}]`;
+    const titleLines = doc.splitTextToSize(`${i + 1}. ${clause.title}`, pageWidth - margin * 2 - 38);
     const locLines = clause.exactLocation ? doc.splitTextToSize(`Ubicación con Lupa: ${clause.exactLocation}`, pageWidth - margin * 2 - 6) : [];
     const snippetLines = doc.splitTextToSize(`"${clause.originalSnippet}"`, pageWidth - margin * 2 - 8);
     const findingLines = doc.splitTextToSize(`Hallazgo: ${clause.finding}`, pageWidth - margin * 2 - 6);
     const recLines = doc.splitTextToSize(`Recomendación: ${clause.recommendation}`, pageWidth - margin * 2 - 6);
     const draftLines = clause.suggestedDrafting ? doc.splitTextToSize(`Enmienda Propuesta: "${clause.suggestedDrafting}"`, pageWidth - margin * 2 - 6) : [];
 
-    const totalHeight = locLines.length * 3.8 + snippetLines.length * 3.5 + findingLines.length * 3.5 + recLines.length * 3.5 + draftLines.length * 3.5 + 16;
+    const headerHeight = Math.max(titleLines.length * 4.2 + 2.5, 7);
+    const totalHeight = headerHeight + locLines.length * 3.8 + snippetLines.length * 3.5 + findingLines.length * 3.5 + recLines.length * 3.5 + draftLines.length * 3.5 + 16;
     checkPageBreak(totalHeight);
 
+    // Fondo gris dinámico según la cantidad de líneas del título
     doc.setFillColor(241, 245, 249);
-    doc.roundedRect(margin, y, pageWidth - margin * 2, 6, 1, 1, 'F');
+    doc.roundedRect(margin, y, pageWidth - margin * 2, headerHeight, 1.5, 1.5, 'F');
+
+    // Título envuelto a la izquierda
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     doc.setTextColor(15, 39, 68);
-    doc.text(`${i + 1}. ${clause.title}`, margin + 3, y + 4.2);
+    doc.text(titleLines, margin + 3, y + 4.2);
 
+    // Estado / Severidad traducido al español y alineado a la derecha
     doc.setTextColor(clause.compliant ? 47 : 197, clause.compliant ? 133 : 48, clause.compliant ? 90 : 48);
-    doc.text(
-      `[${clause.compliant ? 'CONFORME' : 'RIESGO ' + clause.riskLevel.toUpperCase()}]`,
-      pageWidth - margin - 35,
-      y + 4.2
-    );
-    y += 8;
+    doc.text(statusText, pageWidth - margin - 3, y + 4.2, { align: 'right' });
+    y += headerHeight + 2;
 
     if (locLines.length > 0) {
       doc.setFont('helvetica', 'bold');
