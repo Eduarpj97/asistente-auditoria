@@ -397,45 +397,60 @@ export function exportToPDF(audit: ContractAudit): void {
   doc.text(`Documento auditado: ${audit.contractTitle}`, margin, y);
   y += 6;
 
-  // Metadata Box
+  // Metadata Box (Ficha Técnica con 2 columnas proporcionales y ajuste de texto)
+  const col1X = margin + 4;
+  const col1ValX = margin + 36;
+  const col2X = margin + (pageWidth - margin * 2) * 0.52;
+  const col2ValX = col2X + 26;
+  const col2ValMaxW = pageWidth - margin - col2ValX - 4;
+
+  const docTypeLines = doc.splitTextToSize(audit.documentType, col2X - col1ValX - 4);
+  const totalValLines = doc.splitTextToSize(audit.totalValue || 'No especificado', col2ValMaxW);
+  const metaBoxHeight = Math.max(28, 18 + Math.max(docTypeLines.length, totalValLines.length) * 4);
+
   doc.setFillColor(248, 250, 252);
   doc.setDrawColor(203, 213, 225);
-  doc.roundedRect(margin, y, pageWidth - margin * 2, 28, 2, 2, 'FD');
+  doc.roundedRect(margin, y, pageWidth - margin * 2, metaBoxHeight, 2, 2, 'FD');
 
-  doc.setFontSize(8.5);
+  doc.setFontSize(8);
   doc.setTextColor(51, 65, 85);
+
+  // Fila 1
   doc.setFont('helvetica', 'bold');
-  doc.text('Tipo de Documento:', margin + 4, y + 6);
+  doc.text('Tipo Documento:', col1X, y + 6);
   doc.setFont('helvetica', 'normal');
-  doc.text(audit.documentType, margin + 40, y + 6);
+  doc.text(docTypeLines[0] || audit.documentType, col1ValX, y + 6);
 
   doc.setFont('helvetica', 'bold');
-  doc.text('Fecha Auditoría:', margin + 4, y + 12);
-  doc.setFont('helvetica', 'normal');
-  doc.text(audit.auditDate, margin + 40, y + 12);
-
-  doc.setFont('helvetica', 'bold');
-  doc.text('Vigencia:', margin + 4, y + 18);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`${audit.effectiveDate} al ${audit.expirationDate}`, margin + 40, y + 18);
-
-  doc.setFont('helvetica', 'bold');
-  doc.text('Riesgo Global:', margin + 105, y + 6);
+  doc.text('Riesgo Global:', col2X, y + 6);
   doc.setTextColor(audit.overallRiskScore > 60 ? 197 : 47, audit.overallRiskScore > 60 ? 48 : 133, 48);
+  doc.text(`${audit.overallRiskScore}/100`, col2ValX, y + 6);
+
+  // Fila 2
+  doc.setTextColor(51, 65, 85);
   doc.setFont('helvetica', 'bold');
-  doc.text(`${audit.overallRiskScore}/100`, margin + 135, y + 6);
-
-  doc.setTextColor(51, 65, 85);
-  doc.text('Cumplimiento:', margin + 105, y + 12);
-  doc.setTextColor(audit.complianceScore >= 80 ? 47 : 197, 133, 90);
-  doc.text(`${audit.complianceScore}%`, margin + 135, y + 12);
-
-  doc.setTextColor(51, 65, 85);
-  doc.text('Valor Total:', margin + 105, y + 18);
+  doc.text('Fecha Auditoría:', col1X, y + 12);
   doc.setFont('helvetica', 'normal');
-  doc.text(audit.totalValue || 'No especificado', margin + 135, y + 18);
+  doc.text(audit.auditDate, col1ValX, y + 12);
 
-  y += 34;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Cumplimiento:', col2X, y + 12);
+  doc.setTextColor(audit.complianceScore >= 80 ? 47 : 197, 133, 90);
+  doc.text(`${audit.complianceScore}%`, col2ValX, y + 12);
+
+  // Fila 3
+  doc.setTextColor(51, 65, 85);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Vigencia:', col1X, y + 18);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${audit.effectiveDate} al ${audit.expirationDate}`, col1ValX, y + 18);
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('Valor Total:', col2X, y + 18);
+  doc.setFont('helvetica', 'normal');
+  doc.text(totalValLines, col2ValX, y + 18);
+
+  y += metaBoxHeight + 6;
 
   // Resumen del Documento
   checkPageBreak(35);
@@ -453,7 +468,7 @@ export function exportToPDF(audit: ContractAudit): void {
   doc.text(summaryLines, margin, y);
   y += summaryLines.length * 4 + 6;
 
-  // Identified Risks (Formateo Dinámico Sin Cortes)
+  // Identified Risks (Formateo Dinámico Sin Cortes ni Solapamientos)
   checkPageBreak(30);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
@@ -464,7 +479,7 @@ export function exportToPDF(audit: ContractAudit): void {
   audit.risksIdentified.forEach((risk, i) => {
     const sevLabel = translateSeverity(risk.severity);
     const badgeText = `[SEVERIDAD: ${sevLabel}]`;
-    const titleLines = doc.splitTextToSize(`${i + 1}. ${risk.title}`, pageWidth - margin * 2 - 40);
+    const titleLines = doc.splitTextToSize(`${i + 1}. ${risk.title}`, pageWidth - margin * 2 - 50);
     const descLines = doc.splitTextToSize(`Diagnóstico del Riesgo: ${risk.description}`, pageWidth - margin * 2 - 6);
     const mitLines = doc.splitTextToSize(`Recomendación Legal & Preventiva: ${risk.mitigation}`, pageWidth - margin * 2 - 6);
     const locLines = risk.exactLocation ? doc.splitTextToSize(`Revisar con Lupa en Documento: ${risk.exactLocation}`, pageWidth - margin * 2 - 6) : [];
@@ -472,7 +487,7 @@ export function exportToPDF(audit: ContractAudit): void {
     const legalLines = risk.legalReference ? doc.splitTextToSize(`Marco Normativo: ${risk.legalReference}`, pageWidth - margin * 2 - 6) : [];
     const draftLines = risk.suggestedDrafting ? doc.splitTextToSize(`Redacción Sugerida: "${risk.suggestedDrafting}"`, pageWidth - margin * 2 - 6) : [];
 
-    const headerHeight = Math.max(titleLines.length * 4.2, 5.5);
+    const headerHeight = Math.max(titleLines.length * 4.2, 6);
     const totalHeight = headerHeight + descLines.length * 3.8 + mitLines.length * 3.8 + locLines.length * 3.8 + quoteLines.length * 3.5 + legalLines.length * 3.5 + draftLines.length * 3.5 + 14;
     checkPageBreak(totalHeight);
 
@@ -538,30 +553,34 @@ export function exportToPDF(audit: ContractAudit): void {
 
   audit.clauses.forEach((clause, i) => {
     const statusText = clause.compliant ? '[CONFORME]' : `[RIESGO ${translateSeverity(clause.riskLevel)}]`;
-    const titleLines = doc.splitTextToSize(`${i + 1}. ${clause.title}`, pageWidth - margin * 2 - 38);
+    // Ancho útil disponible para el título: dejamos 45mm a la derecha para que el badge nunca choque
+    const badgeWidth = 45;
+    const maxTitleWidth = pageWidth - margin * 2 - badgeWidth - 6;
+    const titleLines = doc.splitTextToSize(`${i + 1}. ${clause.title}`, maxTitleWidth);
+
     const locLines = clause.exactLocation ? doc.splitTextToSize(`Ubicación con Lupa: ${clause.exactLocation}`, pageWidth - margin * 2 - 6) : [];
     const snippetLines = doc.splitTextToSize(`"${clause.originalSnippet}"`, pageWidth - margin * 2 - 8);
     const findingLines = doc.splitTextToSize(`Hallazgo: ${clause.finding}`, pageWidth - margin * 2 - 6);
     const recLines = doc.splitTextToSize(`Recomendación: ${clause.recommendation}`, pageWidth - margin * 2 - 6);
     const draftLines = clause.suggestedDrafting ? doc.splitTextToSize(`Enmienda Propuesta: "${clause.suggestedDrafting}"`, pageWidth - margin * 2 - 6) : [];
 
-    const headerHeight = Math.max(titleLines.length * 4.2 + 2.5, 7);
+    const headerHeight = Math.max(titleLines.length * 4.2 + 3, 8);
     const totalHeight = headerHeight + locLines.length * 3.8 + snippetLines.length * 3.5 + findingLines.length * 3.5 + recLines.length * 3.5 + draftLines.length * 3.5 + 16;
     checkPageBreak(totalHeight);
 
-    // Fondo gris dinámico según la cantidad de líneas del título
+    // Fondo gris dinámico cubriendo todo el encabezado
     doc.setFillColor(241, 245, 249);
     doc.roundedRect(margin, y, pageWidth - margin * 2, headerHeight, 1.5, 1.5, 'F');
 
-    // Título envuelto a la izquierda
+    // Título envuelto estrictamente dentro de maxTitleWidth
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     doc.setTextColor(15, 39, 68);
-    doc.text(titleLines, margin + 3, y + 4.2);
+    doc.text(titleLines, margin + 3, y + 4.5);
 
-    // Estado / Severidad traducido al español y alineado a la derecha
+    // Estado / Severidad colocado en la zona derecha reservada (sin colisión posible)
     doc.setTextColor(clause.compliant ? 47 : 197, clause.compliant ? 133 : 48, clause.compliant ? 90 : 48);
-    doc.text(statusText, pageWidth - margin - 3, y + 4.2, { align: 'right' });
+    doc.text(statusText, pageWidth - margin - 3, y + 4.5, { align: 'right' });
     y += headerHeight + 2;
 
     if (locLines.length > 0) {
