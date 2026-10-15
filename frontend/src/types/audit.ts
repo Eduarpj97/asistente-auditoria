@@ -57,6 +57,8 @@ export interface ContractAudit {
   id: string;
   contractTitle: string;
   documentType: string;
+  contractTypology?: string;
+  typologyExplanation?: string;
   fileName: string;
   fileSize?: string;
   auditDate: string; // ISO or YYYY-MM-DD

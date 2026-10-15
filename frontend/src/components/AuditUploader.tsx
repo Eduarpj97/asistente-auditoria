@@ -295,9 +295,81 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
         return `Este documento (${cleanTitleFormatted}) es un acuerdo entre dos o más partes que establece las condiciones bajo las cuales se van a prestar servicios, entregar productos o cumplir compromisos comerciales. En él se definen los derechos y obligaciones de cada parte, las formas de pago, los plazos de ejecución, las reglas de confidencialidad y las consecuencias en caso de incumplimiento.`;
       };
 
+      // Detección y explicación de la tipología contractual en lenguaje simple
+      const getContractTypology = (): { typology: string; explanation: string } => {
+        if (aiLlm.tipologia_contrato && aiLlm.explicacion_tipologia) {
+          return {
+            typology: aiLlm.tipologia_contrato,
+            explanation: aiLlm.explicacion_tipologia,
+          };
+        }
+
+        const combinedText = `${cleanTitleFormatted} ${uploadFileName} ${aiLlm.resumen_ejecutivo || ''}`.toLowerCase();
+
+        if (/arrendamiento|arrendador|arrendatario|canon|inmueble|locativo/.test(combinedText)) {
+          return {
+            typology: 'Contrato de Arrendamiento',
+            explanation:
+              'Es un acuerdo donde el dueño o administrador de un bien (arrendador) le permite a otra persona (arrendatario) usarlo y disfrutarlo temporalmente a cambio de un pago periódico (canon). No transfiere la propiedad del inmueble ni crea una relación laboral subordinada.',
+          };
+        }
+        if (/trabajo|laboral|empleador|trabajador|c[oó]digo sustantivo|subordinaci[oó]n|salario/.test(combinedText)) {
+          return {
+            typology: 'Contrato Individual de Trabajo',
+            explanation:
+              'Es un vínculo laboral formal donde una persona presta sus servicios personales bajo la continua subordinación y órdenes de un empleador, a cambio de un salario periódico y con derecho a prestaciones sociales y seguridad social obligatoria.',
+          };
+        }
+        if (/prestaci[oó]n de servicios|prestacion de servicios|contratista|honorarios|autonom[ií]a/.test(combinedText)) {
+          return {
+            typology: 'Contrato de Prestación de Servicios',
+            explanation:
+              'Es un acuerdo de naturaleza civil o comercial donde un profesional o empresa independiente se compromete a realizar una labor puntual a cambio de unos honorarios. El contratista trabaja con total autonomía técnica y no existe horario fijo ni relación de subordinación laboral.',
+          };
+        }
+        if (/confidencialidad|nda|no divulgaci[oó]n|secreto comercial/.test(combinedText)) {
+          return {
+            typology: 'Acuerdo de Confidencialidad (NDA)',
+            explanation:
+              'Es un compromiso legal preventivo que obliga a las partes a proteger la información privada, técnica, financiera o comercial que compartan, prohibiendo revelarla a terceros o usarla para fines no autorizados.',
+          };
+        }
+        if (/matr[ií]cula|academusoft|estudiante|semestre|educativo|asignatura/.test(combinedText)) {
+          return {
+            typology: 'Registro de Matrícula / Acuerdo Educativo',
+            explanation:
+              'Es un documento formal que vincula a un estudiante con una entidad educativa, detallando el plan académico, las asignaturas inscritas y los compromisos reglamentarios de formación y pago.',
+          };
+        }
+        if (/compraventa|suministro|proveedor|comprador|vendedor/.test(combinedText)) {
+          return {
+            typology: 'Contrato de Compraventa / Suministro',
+            explanation:
+              'Es un acuerdo comercial donde una parte se compromete a entregar mercancías, bienes o insumos de manera periódica o definitiva, y la otra parte se obliga a pagar el precio acordado.',
+          };
+        }
+        if (/software|saas|licencia|plataforma/.test(combinedText)) {
+          return {
+            typology: 'Contrato de Licenciamiento de Software / SaaS',
+            explanation:
+              'Es un contrato tecnológico donde el titular del software autoriza su uso a un cliente bajo condiciones específicas, conservando la propiedad intelectual y fijando reglas de disponibilidad y soporte.',
+          };
+        }
+
+        return {
+          typology: 'Contrato Comercial / Acuerdo General',
+          explanation:
+            'Es un acuerdo bilateral donde las partes definen sus compromisos mutuos, plazos de cumplimiento, condiciones de pago y responsabilidades legales para colaborar o llevar a cabo un negocio o servicio conjunto.',
+        };
+      };
+
+      const { typology, explanation } = getContractTypology();
+
       const newAudit: ContractAudit = {
         id: `aud-${Date.now()}`,
         contractTitle: cleanTitleFormatted,
+        contractTypology: typology,
+        typologyExplanation: explanation,
         documentType:
           overallRisk > 70
             ? 'Contrato de Alto Riesgo / Observado'

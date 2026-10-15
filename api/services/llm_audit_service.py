@@ -5,7 +5,7 @@ import time
 import subprocess
 import urllib.request
 import urllib.error
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
 import re
 
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://132.145.198.1:11434")
@@ -98,39 +98,107 @@ class LLMAuditService:
         clean = clean.replace("\\", "/")
         return clean[:max_chars].strip()
 
-    def _parse_json_resilient(self, raw_text: str) -> Dict[str, Any]:
+    def detect_typology_heuristic(self, text: str) -> Tuple[str, str]:
+        """
+        Clasifica heurísticamente la tipología del contrato y genera una explicación
+        en lenguaje simple y accesible para cualquier persona.
+        """
+        t = text.lower()
+        if re.search(r'arrendamiento|arrendador|arrendatario|canon\s+de\s+arrendamiento|inmueble|locativo', t):
+            return (
+                "Contrato de Arrendamiento",
+                "Es un acuerdo donde el dueño o administrador de un bien (arrendador) le permite a otra persona (arrendatario) usarlo y disfrutarlo temporalmente a cambio de un pago periódico (canon). No transfiere la propiedad del bien ni crea una relación laboral."
+            )
+        elif re.search(r'contrato\s+(individual\s+)?de\s+trabajo|laboral|empleador|trabajador|c[oó]digo\s+sustantivo|subordinaci[oó]n|salario\s+mensual', t):
+            return (
+                "Contrato Individual de Trabajo",
+                "Es un vínculo laboral formal donde una persona presta sus servicios personales bajo las órdenes directas y continuas de un empleador (subordinación), a cambio de un salario periódico y con cobertura de prestaciones sociales y seguridad social obligatoria."
+            )
+        elif re.search(r'prestaci[oó]n\s+de\s+servicios|contratista|honorarios|independencia\s+t[eé]cnica|autonom[ií]a\s+t[eé]cnica', t):
+            return (
+                "Contrato de Prestación de Servicios",
+                "Es un acuerdo civil o comercial donde un profesional o empresa independiente se compromete a realizar una labor puntual a cambio de unos honorarios. El contratista trabaja con total autonomía y no existe relación de empleo ni horario laboral obligatorio."
+            )
+        elif re.search(r'confidencialidad|non-disclosure|nda|secreto\s+(comercial|industrial)|no\s+divulgaci[oó]n', t):
+            return (
+                "Acuerdo de Confidencialidad (NDA)",
+                "Es un compromiso legal preventivo que obliga a las partes a proteger la información privada, financiera o técnica que compartan, prohibiendo revelarla a terceros o usarla para fines no autorizados."
+            )
+        elif re.search(r'matr[ií]cula|academusoft|estudiante|semestre|educativo|asignatura|cr[eé]ditos\s+acad[eé]micos', t):
+            return (
+                "Registro de Matrícula / Acuerdo Educativo",
+                "Es un documento formal que vincula a un estudiante con una institución educativa, detallando el plan académico, las asignaturas inscritas y los compromisos reglamentarios de formación y pago."
+            )
+        elif re.search(r'compraventa|suministro|suministrante|comprador|vendedor|mercanc[ií]as|proveedor', t):
+            return (
+                "Contrato de Compraventa / Suministro",
+                "Es un acuerdo comercial donde una parte se compromete a entregar mercancías, bienes o insumos de manera periódica o definitiva, y la otra parte se obliga a pagar el precio acordado."
+            )
+        elif re.search(r'software|saas|licencia\s+de\s+uso|plataforma\s+digital|c[oó]digo\s+fuente', t):
+            return (
+                "Contrato de Licenciamiento de Software / SaaS",
+                "Es un contrato tecnológico donde el propietario del software autoriza su uso a un cliente o usuario bajo condiciones específicas, conservando la propiedad intelectual y fijando reglas de disponibilidad y soporte."
+            )
+        else:
+            return (
+                "Contrato Comercial / Acuerdo General",
+                "Es un acuerdo bilateral donde las partes definen sus compromisos mutuos, plazos de cumplimiento, condiciones de pago y responsabilidades legales para colaborar o llevar a cabo un negocio o servicio conjunto."
+            )
+
+    def _parse_json_resilient(self, raw_text: str, sample_text: str = "") -> Dict[str, Any]:
         """
         Parsea el JSON generado por Llama 3.1 de forma tolerante a fallos y truncamientos.
-        Garantiza que resumen_ejecutivo, score y cláusulas nunca se pierdan.
+        Garantiza que tipologia_contrato, explicacion_tipologia, resumen_ejecutivo, score y cláusulas nunca se pierdan.
         """
+        parsed: Optional[Dict[str, Any]] = None
+
         # 1. Intento directo estándar
         try:
-            return json.loads(raw_text)
+            data = json.loads(raw_text)
+            if isinstance(data, dict):
+                parsed = data
         except Exception:
             pass
 
         # 2. Intento de auto-reparar corchetes y llaves truncadas
-        try:
-            clean = raw_text.strip()
-            if clean.count('"') % 2 != 0:
-                clean += '"'
-            for _ in range(5):
-                try:
-                    return json.loads(clean)
-                except Exception:
-                    if clean.rfind("{") > clean.rfind("}"):
-                        clean += "}"
-                    elif clean.rfind("[") > clean.rfind("]"):
-                        clean += "]"
-                    else:
-                        break
-        except Exception:
-            pass
+        if parsed is None:
+            try:
+                clean = raw_text.strip()
+                if clean.count('"') % 2 != 0:
+                    clean += '"'
+                for _ in range(5):
+                    try:
+                        data = json.loads(clean)
+                        if isinstance(data, dict):
+                            parsed = data
+                            break
+                    except Exception:
+                        if clean.rfind("{") > clean.rfind("}"):
+                            clean += "}"
+                        elif clean.rfind("[") > clean.rfind("]"):
+                            clean += "]"
+                        else:
+                            break
+            except Exception:
+                pass
+
+        # Determinar fallback heurístico de tipología
+        heuristic_tipo, heuristic_expl = self.detect_typology_heuristic(sample_text)
+
+        if parsed is not None:
+            # Asegurar campos de tipología si el LLM no los trajo o vinieron vacíos
+            if not parsed.get("tipologia_contrato") or len(str(parsed.get("tipologia_contrato", "")).strip()) < 3:
+                parsed["tipologia_contrato"] = heuristic_tipo
+            if not parsed.get("explicacion_tipologia") or len(str(parsed.get("explicacion_tipologia", "")).strip()) < 10:
+                parsed["explicacion_tipologia"] = heuristic_expl
+            return parsed
 
         # 3. Extracción de contingencia por Regex
         score_match = re.search(r'"score_riesgo_ia"\s*:\s*(\d+)', raw_text)
         nivel_match = re.search(r'"nivel_riesgo_ia"\s*:\s*"([^"]+)"', raw_text)
         resumen_match = re.search(r'"resumen_ejecutivo"\s*:\s*"([^"]+)"', raw_text)
+        tipo_match = re.search(r'"tipologia_contrato"\s*:\s*"([^"]+)"', raw_text)
+        expl_match = re.search(r'"explicacion_tipologia"\s*:\s*"([^"]+)"', raw_text)
 
         clausulas = []
         for c_match in re.finditer(r'\{[^{}]*"tipo"\s*:\s*"([^"]+)"[^{}]*\}', raw_text):
@@ -144,6 +212,8 @@ class LLMAuditService:
         )
 
         return {
+            "tipologia_contrato": tipo_match.group(1) if tipo_match else heuristic_tipo,
+            "explicacion_tipologia": expl_match.group(1) if expl_match else heuristic_expl,
             "score_riesgo_ia": int(score_match.group(1)) if score_match else 50,
             "nivel_riesgo_ia": nivel_match.group(1) if nivel_match else "MEDIO",
             "resumen_ejecutivo": resumen_match.group(1) if resumen_match else default_summary,
@@ -202,8 +272,10 @@ class LLMAuditService:
         system_prompt = (
             "Eres Audiflow, un auditor legal de contratos e instrumentos jurídicos.\n"
             "INSTRUCCIONES CLAVE:\n"
-            "1. En 'resumen_ejecutivo', explica en 2 o 3 oraciones en LENGUAJE SIMPLE Y COTIDIANO de qué se trata exactamente el documento analizado según su contenido real (ej. si es una matrícula de universidad, acuerdo de servicios, compraventa, etc., indicando las partes y el objeto). NO uses plantillas genéricas fijas ni numerales.\n"
-            "2. En 'clausulas_criticas', identifica 1 o 2 estipulaciones que contengan riesgos o asimetrías según las normativas vigentes (RGPD, AML, anticorrupción, penalidades desproporcionadas). Si el documento es un acuerdo simple o constancia sin cláusulas de riesgo, indica un score bajo (ej. 5 o 10) y deja 'clausulas_criticas' vacío.\n"
+            "1. En 'tipologia_contrato', identifica con precisión la categoría jurídica del documento (ej. 'Contrato de Prestación de Servicios', 'Contrato Individual de Trabajo', 'Contrato de Arrendamiento', 'Acuerdo de Confidencialidad (NDA)', 'Contrato de Compraventa / Suministro', 'Registro de Matrícula / Acuerdo Educativo', 'Contrato de Licenciamiento de Software / SaaS', 'Contrato de Obra / Mandato', etc.).\n"
+            "2. En 'explicacion_tipologia', redacta en LENGUAJE SIMPLE PERO BIEN EXPLICADO qué significa esta tipología de contrato, qué relación jurídica crea entre las partes y cuáles son sus implicaciones prácticas (ej. si genera o no relación laboral, si transfiere propiedad o solo uso y goce, o cuáles son las obligaciones clave de cada parte).\n"
+            "3. En 'resumen_ejecutivo', explica en 2 o 3 oraciones en LENGUAJE SIMPLE Y COTIDIANO de qué se trata exactamente el documento analizado según su contenido real (indicando las partes y el objeto concreto pactado). NO uses plantillas genéricas fijas ni numerales.\n"
+            "4. En 'clausulas_criticas', identifica 1 o 2 estipulaciones que contengan riesgos o asimetrías según las normativas vigentes (RGPD, AML, anticorrupción, penalidades desproporcionadas). Si el documento es un acuerdo simple o constancia sin cláusulas de riesgo, indica un score bajo (ej. 5 o 10) y deja 'clausulas_criticas' vacío.\n"
             "Para cada cláusula crítica detectada indica:\n"
             "   - 'tipo': Categoría jurídica.\n"
             "   - 'severidad': ALTO | MEDIO | BAJO.\n"
@@ -215,6 +287,8 @@ class LLMAuditService:
             "   - 'redaccion_sugerida': Propuesta para adenda.\n\n"
             "Debes responder OBLIGATORIAMENTE en formato JSON válido con esta estructura:\n"
             "{\n"
+            '  "tipologia_contrato": "<nombre de la tipología contractual>",\n'
+            '  "explicacion_tipologia": "<explicación en lenguaje simple de qué implica este tipo de contrato y la relación entre las partes>",\n'
             '  "score_riesgo_ia": <numero entero 0-100>,\n'
             '  "nivel_riesgo_ia": "<ALTO | MEDIO | BAJO>",\n'
             '  "resumen_ejecutivo": "<resumen específico en lenguaje simple de qué trata este documento>",\n'
@@ -254,7 +328,7 @@ class LLMAuditService:
                 if resp.status == 200:
                     raw_data = json.loads(resp.read().decode("utf-8"))
                     content = raw_data.get("message", {}).get("content", "{}")
-                    parsed_result = self._parse_json_resilient(content)
+                    parsed_result = self._parse_json_resilient(content, sample_text)
                     return {
                         "exito": True,
                         "motor": f"Ollama ({self.model})",
@@ -271,7 +345,8 @@ class LLMAuditService:
         except Exception as e:
             print(f"[LLMAuditService] Excepción de conexión con Ollama: {e}")
 
-        # Fallback cuando Ollama está offline: resumen genérico en lenguaje simple
+        # Fallback cuando Ollama está offline: resumen genérico y tipología en lenguaje simple
+        fallback_tipo, fallback_expl = self.detect_typology_heuristic(sample_text)
         fallback_summary = (
             "Este documento es un acuerdo legal entre dos o más partes que define las condiciones del servicio o negocio pactado, incluyendo obligaciones, pagos, plazos y responsabilidades de cada parte involucrada."
         )
@@ -281,6 +356,8 @@ class LLMAuditService:
             "motor": f"Ollama ({self.model})",
             "endpoint": endpoint,
             "resultado_ia": {
+                "tipologia_contrato": fallback_tipo,
+                "explicacion_tipologia": fallback_expl,
                 "score_riesgo_ia": 0,
                 "nivel_riesgo_ia": "MODERADO",
                 "resumen_ejecutivo": fallback_summary,

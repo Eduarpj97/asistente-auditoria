@@ -54,7 +54,8 @@ export async function exportToWord(audit: ContractAudit): Promise<void> {
             width: { size: 100, type: WidthType.PERCENTAGE },
             rows: [
               createTableRow('Contrato / Título:', audit.contractTitle, true),
-              createTableRow('Tipo de Documento:', audit.documentType),
+              createTableRow('Tipología Contractual:', audit.contractTypology || audit.documentType),
+              createTableRow('Clasificación de Riesgo:', audit.documentType),
               createTableRow('Fecha de Auditoría:', audit.auditDate),
               createTableRow('Auditor Asignado:', audit.auditedBy || 'Auditor Senior Audiflow'),
               createTableRow('Estado Dictamen:', audit.status.toUpperCase()),
@@ -96,18 +97,34 @@ export async function exportToWord(audit: ContractAudit): Promise<void> {
           // Resumen del Documento
           new Paragraph({
             heading: HeadingLevel.HEADING_2,
-            children: [new TextRun({ text: '3. Resumen del Documento', bold: true, color: '0F2744' })],
+            children: [new TextRun({ text: '3. Resumen Ejecutivo en Lenguaje Simple', bold: true, color: '0F2744' })],
             spacing: { before: 200, after: 100 },
           }),
           new Paragraph({
             children: [new TextRun({ text: audit.summary, italics: false })],
+            spacing: { after: 250 },
+          }),
+
+          // Naturaleza y Tipología Contractual
+          new Paragraph({
+            heading: HeadingLevel.HEADING_2,
+            children: [new TextRun({ text: `4. Naturaleza y Tipología Contractual: ${audit.contractTypology || 'Contrato Bilateral'}`, bold: true, color: '0F2744' })],
+            spacing: { before: 200, after: 100 },
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: audit.typologyExplanation || 'Este acuerdo define las condiciones y compromisos legales recíprocos entre las partes involucradas.',
+                italics: false,
+              }),
+            ],
             spacing: { after: 300 },
           }),
 
           // Identified Risks (Matriz con Citas del Original y Recomendaciones Legales)
           new Paragraph({
             heading: HeadingLevel.HEADING_2,
-            children: [new TextRun({ text: '4. Matriz de Contingencias, Riesgos y Recomendaciones Legales', bold: true, color: '0F2744' })],
+            children: [new TextRun({ text: '5. Matriz de Contingencias, Riesgos y Recomendaciones Legales', bold: true, color: '0F2744' })],
             spacing: { before: 300, after: 100 },
           }),
           ...audit.risksIdentified.flatMap((risk, idx) => {
@@ -195,7 +212,7 @@ export async function exportToWord(audit: ContractAudit): Promise<void> {
           // Audited Clauses
           new Paragraph({
             heading: HeadingLevel.HEADING_2,
-            children: [new TextRun({ text: '5. Auditoría Cláusula por Cláusula (Trazabilidad Forense)', bold: true, color: '0F2744' })],
+            children: [new TextRun({ text: '6. Auditoría Cláusula por Cláusula (Trazabilidad Forense)', bold: true, color: '0F2744' })],
             spacing: { before: 300, after: 100 },
           }),
           ...audit.clauses.flatMap((clause, idx) => {
@@ -281,7 +298,7 @@ export async function exportToWord(audit: ContractAudit): Promise<void> {
           // Missing essential clauses
           new Paragraph({
             heading: HeadingLevel.HEADING_2,
-            children: [new TextRun({ text: '6. Cláusulas Esenciales Ausentes Recomendadas', bold: true, color: '0F2744' })],
+            children: [new TextRun({ text: '7. Cláusulas Esenciales Ausentes Recomendadas', bold: true, color: '0F2744' })],
             spacing: { before: 300, after: 100 },
           }),
           ...audit.missingEssentialClauses.map(
@@ -404,7 +421,8 @@ export function exportToPDF(audit: ContractAudit): void {
   const col2ValX = col2X + 26;
   const col2ValMaxW = pageWidth - margin - col2ValX - 4;
 
-  const docTypeLines = doc.splitTextToSize(audit.documentType, col2X - col1ValX - 4);
+  const docTypeLabel = audit.contractTypology || audit.documentType;
+  const docTypeLines = doc.splitTextToSize(docTypeLabel, col2X - col1ValX - 4);
   const totalValLines = doc.splitTextToSize(audit.totalValue || 'No especificado', col2ValMaxW);
   const metaBoxHeight = Math.max(28, 18 + Math.max(docTypeLines.length, totalValLines.length) * 4);
 
@@ -417,9 +435,9 @@ export function exportToPDF(audit: ContractAudit): void {
 
   // Fila 1
   doc.setFont('helvetica', 'bold');
-  doc.text('Tipo Documento:', col1X, y + 6);
+  doc.text('Tipología:', col1X, y + 6);
   doc.setFont('helvetica', 'normal');
-  doc.text(docTypeLines[0] || audit.documentType, col1ValX, y + 6);
+  doc.text(docTypeLines[0] || docTypeLabel, col1ValX, y + 6);
 
   doc.setFont('helvetica', 'bold');
   doc.text('Riesgo Global:', col2X, y + 6);
@@ -457,7 +475,7 @@ export function exportToPDF(audit: ContractAudit): void {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.setTextColor(15, 39, 68);
-  doc.text('RESUMEN DEL DOCUMENTO', margin, y);
+  doc.text('RESUMEN EJECUTIVO EN LENGUAJE SIMPLE', margin, y);
   y += 5;
 
   doc.setFont('helvetica', 'normal');
@@ -467,6 +485,24 @@ export function exportToPDF(audit: ContractAudit): void {
   checkPageBreak(summaryLines.length * 4 + 6);
   doc.text(summaryLines, margin, y);
   y += summaryLines.length * 4 + 6;
+
+  // Naturaleza y Tipología Contractual
+  const tipologiaTitle = audit.contractTypology || 'Contrato Bilateral';
+  const tipologiaExplanation = audit.typologyExplanation || 'Este acuerdo define las condiciones y compromisos legales recíprocos entre las partes involucradas.';
+  const tipologyLines = doc.splitTextToSize(tipologiaExplanation, pageWidth - margin * 2);
+  checkPageBreak(tipologyLines.length * 4 + 14);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(15, 39, 68);
+  doc.text(`NATURALEZA Y TIPOLOGÍA CONTRACTUAL: ${tipologiaTitle.toUpperCase()}`, margin, y);
+  y += 5;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(51, 65, 85);
+  doc.text(tipologyLines, margin, y);
+  y += tipologyLines.length * 4 + 6;
 
   // Identified Risks (Formateo Dinámico Sin Cortes ni Solapamientos)
   checkPageBreak(30);

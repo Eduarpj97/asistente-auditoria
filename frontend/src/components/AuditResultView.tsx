@@ -101,7 +101,10 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-800">
+                {audit.contractTypology || 'Contrato'}
+              </span>
               <span className="text-[11px] font-medium text-[#0071e3] bg-blue-50 dark:bg-blue-950/40 px-2.5 py-0.5 rounded-full">
                 {audit.documentType || 'Mercantil'}
               </span>
@@ -278,6 +281,25 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
         <p className="text-[#1d1d1f] dark:text-[#f5f5f7] text-xs sm:text-sm leading-relaxed whitespace-pre-line">
           {audit.summary}
         </p>
+      </div>
+
+      {/* Naturaleza y Tipología Contractual en Lenguaje Simple */}
+      <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl p-6 sm:p-7 border border-black/[0.04] dark:border-white/[0.06] shadow-xs space-y-3">
+        <div className="flex items-center justify-between pb-3 border-b border-black/[0.04] dark:border-white/[0.06]">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
+            <Scale className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <span>Naturaleza y Tipología Contractual</span>
+          </div>
+          <span className="text-[11px] font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-3 py-1 rounded-full border border-indigo-200 dark:border-indigo-800">
+            {audit.contractTypology || 'Contrato Bilateral'}
+          </span>
+        </div>
+        <div className="p-4 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40">
+          <p className="text-xs sm:text-sm font-medium text-indigo-950 dark:text-indigo-200 leading-relaxed whitespace-pre-line">
+            {audit.typologyExplanation ||
+              'Este acuerdo define las pautas y compromisos recíprocos entre las partes firmantes, determinando el alcance de sus obligaciones, facultades y derechos en lenguaje claro.'}
+          </p>
+        </div>
       </div>
 
       {/* Tabs: Cláusulas vs Riesgos vs Omisiones */}
