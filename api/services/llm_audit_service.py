@@ -220,6 +220,70 @@ class LLMAuditService:
             "clausulas_criticas": clausulas
         }
 
+    def apply_anti_hallucination_harness(self, parsed: Dict[str, Any], raw_contract: str) -> Dict[str, Any]:
+        """
+        Arnés de verificación cruzada en Python:
+        Valida que cada hallazgo de la IA esté físicamente respaldado por el texto del contrato.
+        Elimina alucinaciones, citas inventadas y falsos positivos.
+        """
+        if not isinstance(parsed, dict):
+            return parsed
+
+        norm_contract = re.sub(r'\s+', ' ', raw_contract.lower())
+        validated_clauses = []
+
+        for c in parsed.get("clausulas_criticas", []):
+            if not isinstance(c, dict):
+                continue
+            cita = str(c.get("cita_textual", "")).strip()
+            # Si no hay cita o es un placeholder genérico
+            if len(cita) < 8 or cita.lower() in [
+                "cita textual analizada en el contrato.",
+                "n/a",
+                "no aplica",
+                "texto específico analizado en las estipulaciones del documento."
+            ]:
+                continue
+
+            # Limpiar cita para búsqueda tolerante (sin signos de puntuación)
+            norm_cita = re.sub(r'\s+', ' ', cita.lower())
+            
+            # Verificar si la cita completa o un fragmento significativo de al menos 4 palabras existe en el contrato
+            palabras = [p for p in re.split(r'\W+', norm_cita) if len(p) > 2]
+            found = False
+            
+            if norm_cita in norm_contract:
+                found = True
+            elif len(palabras) >= 4:
+                # Comprobar si al menos una subsecuencia de 4 palabras consecutivas existe en el contrato
+                for i in range(len(palabras) - 3):
+                    chunk = " ".join(palabras[i:i+4])
+                    if chunk in norm_contract:
+                        found = True
+                        break
+            elif len(palabras) > 0:
+                # Si la cita es corta pero sus palabras clave están
+                matched_count = sum(1 for p in palabras if p in norm_contract)
+                if matched_count / len(palabras) >= 0.75:
+                    found = True
+
+            if found:
+                validated_clauses.append(c)
+            else:
+                print(f"[ARNÉS ANTI-ALUCINACIÓN] Descartada cláusula sin respaldo literal: {c.get('tipo', 'Desconocido')} - '{cita[:60]}...'")
+
+        parsed["clausulas_criticas"] = validated_clauses
+
+        # Ajuste de consistencia: si no hay cláusulas críticas válidas en el documento
+        if not validated_clauses:
+            current_score = parsed.get("score_riesgo_ia", 0)
+            if isinstance(current_score, int) and current_score > 25:
+                # Si no hay cláusulas críticas reales, el score se normaliza a nivel bajo
+                parsed["score_riesgo_ia"] = 10
+                parsed["nivel_riesgo_ia"] = "BAJO"
+
+        return parsed
+
     def check_health(self) -> Dict[str, Any]:
         """Verifica la conectividad y modelos disponibles en la VPS de Ollama."""
         endpoint = self._ensure_endpoint()
@@ -264,39 +328,47 @@ class LLMAuditService:
 
     def analyze_contract_semantics(self, contract_text: str, max_chars: int = 2500) -> Dict[str, Any]:
         """
-        Envía el contrato al modelo Llama 3.1 para auditoría semántica profunda aplicando las normativas 2026.
+        Envía el contrato al modelo Llama 3.1 para auditoría semántica profunda aplicando las normativas 2026
+        con arnés estricto anti-alucinaciones y verificación cruzada en tiempo real.
         """
         sample_text = self._sanitize_text(contract_text, max_chars)
         normativas_ref = self.get_normativa_2026_summary()
 
         system_prompt = (
-            "Eres Audiflow, un auditor legal de contratos e instrumentos jurídicos.\n"
-            "INSTRUCCIONES CLAVE:\n"
-            "1. En 'tipologia_contrato', identifica con precisión la categoría jurídica del documento (ej. 'Contrato de Prestación de Servicios', 'Contrato Individual de Trabajo', 'Contrato de Arrendamiento', 'Acuerdo de Confidencialidad (NDA)', 'Contrato de Compraventa / Suministro', 'Registro de Matrícula / Acuerdo Educativo', 'Contrato de Licenciamiento de Software / SaaS', 'Contrato de Obra / Mandato', etc.).\n"
-            "2. En 'explicacion_tipologia', redacta en LENGUAJE SIMPLE PERO BIEN EXPLICADO qué significa esta tipología de contrato, qué relación jurídica crea entre las partes y cuáles son sus implicaciones prácticas (ej. si genera o no relación laboral, si transfiere propiedad o solo uso y goce, o cuáles son las obligaciones clave de cada parte).\n"
-            "3. En 'resumen_ejecutivo', explica en 2 o 3 oraciones en LENGUAJE SIMPLE Y COTIDIANO de qué se trata exactamente el documento analizado según su contenido real (indicando las partes y el objeto concreto pactado). NO uses plantillas genéricas fijas ni numerales.\n"
-            "4. En 'clausulas_criticas', identifica 1 o 2 estipulaciones que contengan riesgos o asimetrías según las normativas vigentes (RGPD, AML, anticorrupción, penalidades desproporcionadas). Si el documento es un acuerdo simple o constancia sin cláusulas de riesgo, indica un score bajo (ej. 5 o 10) y deja 'clausulas_criticas' vacío.\n"
-            "Para cada cláusula crítica detectada indica:\n"
-            "   - 'tipo': Categoría jurídica.\n"
-            "   - 'severidad': ALTO | MEDIO | BAJO.\n"
-            "   - 'ubicacion_exacta': Dónde se ubica en el documento.\n"
-            "   - 'cita_textual': Fragmento literal del documento original.\n"
-            "   - 'explicacion_riesgo': Por qué representa riesgo.\n"
-            "   - 'fundamento_normativo': Norma aplicable.\n"
-            "   - 'recomendacion_legal': Qué hacer para corregirlo.\n"
-            "   - 'redaccion_sugerida': Propuesta para adenda.\n\n"
-            "Debes responder OBLIGATORIAMENTE en formato JSON válido con esta estructura:\n"
+            "Eres Audiflow, un auditor legal de contratos e instrumentos jurídicos con arnés de precisión forense.\n"
+            "REGLAS OBLIGATORIAS DEL ARNÉS ANTI-ALUCINACIÓN:\n"
+            "1. MUNDO CERRADO: Tu único universo de información es estrictamente el texto contenido dentro de las etiquetas <CONTRATO> y </CONTRATO>. Queda prohibido inferir, inventar cláusulas o asumir hechos no explícitamente escritos.\n"
+            "2. GROUNDING Y CITA OBLIGATORIA: En 'clausulas_criticas', toda observación DEBE contener una 'cita_textual' copiada de forma exacta y literal del contrato original. Si una cláusula no existe textualmente, está terminantemente prohibido reportarla.\n"
+            "3. VÁLVULA DE ESCAPE (CERO FALSOS POSITIVOS): Si el documento no presenta cláusulas abusivas ni riesgos graves, DEBES responder con 'clausulas_criticas': [] (lista vacía) y un 'score_riesgo_ia' bajo (ej. 5 o 10). NUNCA inventes cláusulas para rellenar el análisis.\n"
+            "4. TAXONOMÍA ESTRICTA: En 'tipologia_contrato', clasifica el documento en una de estas categorías oficiales: 'Contrato de Prestación de Servicios', 'Contrato Individual de Trabajo', 'Contrato de Arrendamiento', 'Acuerdo de Confidencialidad (NDA)', 'Contrato de Compraventa / Suministro', 'Contrato de Licenciamiento de Software / SaaS', 'Registro de Matrícula / Acuerdo Educativo', o 'Contrato Comercial General'.\n"
+            "5. EXPLICACIÓN EN LENGUAJE SIMPLE: En 'explicacion_tipologia', explica en lenguaje cotidiano qué significa esta figura jurídica, qué relación genera entre las partes y sus implicaciones prácticas.\n"
+            "6. RESUMEN FACTUAL: En 'resumen_ejecutivo', explica en 2 o 3 oraciones sencillas y en lenguaje cotidiano de qué se trata exactamente el documento analizado según su contenido real (partes y objeto concreto). NO uses plantillas fijas.\n\n"
+            "Estructura JSON obligatoria:\n"
             "{\n"
-            '  "tipologia_contrato": "<nombre de la tipología contractual>",\n'
-            '  "explicacion_tipologia": "<explicación en lenguaje simple de qué implica este tipo de contrato y la relación entre las partes>",\n'
-            '  "score_riesgo_ia": <numero entero 0-100>,\n'
+            '  "tipologia_contrato": "<categoría oficial>",\n'
+            '  "explicacion_tipologia": "<explicación en lenguaje simple>",\n'
+            '  "score_riesgo_ia": <número entero 0-100>,\n'
             '  "nivel_riesgo_ia": "<ALTO | MEDIO | BAJO>",\n'
-            '  "resumen_ejecutivo": "<resumen específico en lenguaje simple de qué trata este documento>",\n'
-            '  "clausulas_criticas": []\n'
+            '  "resumen_ejecutivo": "<resumen específico de qué trata este documento>",\n'
+            '  "clausulas_criticas": [\n'
+            '    {\n'
+            '      "tipo": "<Penalidad | SLA | Responsabilidad | Renovacion | Privacidad | Jurisdiccion>",\n'
+            '      "severidad": "ALTO | MEDIO | BAJO",\n'
+            '      "ubicacion_exacta": "<dónde se ubica en el documento>",\n'
+            '      "cita_textual": "<fragmento LITERAL copiado del contrato>",\n'
+            '      "explicacion_riesgo": "<por qué representa riesgo>",\n'
+            '      "fundamento_normativo": "<norma o principio aplicable>",\n'
+            '      "recomendacion_legal": "<qué hacer para corregirlo>",\n'
+            '      "redaccion_sugerida": "<propuesta redactada para adenda>"\n'
+            '    }\n'
+            '  ]\n'
             "}"
         )
 
-        user_prompt = f"Documento a auditar:\n\n{sample_text}\n\nGenera el JSON:"
+        user_prompt = (
+            f"<CONTRATO>\n{sample_text}\n</CONTRATO>\n\n"
+            "Aplica rigurosamente las reglas del arnés anti-alucinación sobre el texto del contrato anterior y responde exclusivamente en formato JSON válido:"
+        )
 
         payload = {
             "model": self.model,
@@ -329,11 +401,13 @@ class LLMAuditService:
                     raw_data = json.loads(resp.read().decode("utf-8"))
                     content = raw_data.get("message", {}).get("content", "{}")
                     parsed_result = self._parse_json_resilient(content, sample_text)
+                    # Aplicar arnés de verificación cruzada de evidencias
+                    harnessed_result = self.apply_anti_hallucination_harness(parsed_result, sample_text)
                     return {
                         "exito": True,
                         "motor": f"Ollama ({self.model})",
                         "endpoint": endpoint,
-                        "resultado_ia": parsed_result
+                        "resultado_ia": harnessed_result
                     }
         except urllib.error.HTTPError as he:
             err_body = ""
