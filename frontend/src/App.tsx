@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { AuthScreen } from './components/AuthScreen';
+import { LoginTransition } from './components/LoginTransition';
 import { Navbar, NavTab } from './components/Navbar';
 import { Dashboard } from './components/Dashboard';
 import { AuditUploader } from './components/AuditUploader';
@@ -42,6 +43,9 @@ export default function App() {
   const [inactivityNotice, setInactivityNotice] = useState<string | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
   const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
+
+  // Entrance transition state para animar el ingreso tras autenticación exitosa
+  const [loginTransitionUser, setLoginTransitionUser] = useState<User | null>(null);
 
   // Active Navigation Tab
   const [currentTab, setCurrentTab] = useState<NavTab>('dashboard');
@@ -275,6 +279,9 @@ export default function App() {
 
   // Auth Handlers con aislamiento estricto entre cuentas
   const handleLogin = (user: User) => {
+    // Disparar animación cinemática de bienvenida y carga del entorno
+    setLoginTransitionUser(user);
+
     // Resetear inmediatamente datos anteriores en memoria para que no se filtren a la nueva cuenta
     setSelectedAudit(null);
     setCurrentUser(user);
@@ -299,6 +306,7 @@ export default function App() {
 
   const handleLogout = () => {
     // Limpieza total del estado para evitar que otra cuenta vea datos residuales
+    setLoginTransitionUser(null);
     setCurrentUser(null);
     setSelectedAudit(null);
     setAudits([]);
@@ -427,7 +435,18 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#000000] text-[#1d1d1f] dark:text-[#f5f5f7] flex flex-col selection:bg-[#0071e3] selection:text-white transition-colors duration-200">
+    <div className={`min-h-screen bg-[#f5f5f7] dark:bg-[#000000] text-[#1d1d1f] dark:text-[#f5f5f7] flex flex-col selection:bg-[#0071e3] selection:text-white transition-colors duration-200 ${
+      loginTransitionUser ? 'pointer-events-none' : 'animate-in fade-in duration-500'
+    }`}>
+      {/* Animación cinemática de bienvenida y entrada a Audiflow */}
+      {loginTransitionUser && (
+        <LoginTransition
+          user={loginTransitionUser}
+          onComplete={() => setLoginTransitionUser(null)}
+          effectiveTheme={effectiveTheme}
+        />
+      )}
+
       {/* Apple Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-[#1d1d1f]/90 dark:bg-[#2c2c2e]/90 text-white px-5 py-3 rounded-full shadow-2xl backdrop-blur-xl flex items-center gap-2.5 text-xs sm:text-sm font-medium animate-in slide-in-from-bottom-5 duration-200 border border-white/10">

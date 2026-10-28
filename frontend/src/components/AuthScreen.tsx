@@ -46,6 +46,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuccessEntering, setIsSuccessEntering] = useState(false);
 
   // Form states - Limpios por defecto sin datos simulados
   const [email, setEmail] = useState('');
@@ -105,10 +106,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         }
 
         saveActiveSession(result.user, rememberMe);
-        setSuccessMessage('¡Cuenta registrada exitosamente!');
+        setIsSuccessEntering(true);
+        setSuccessMessage('¡Cuenta registrada exitosamente! Preparando entorno...');
         setTimeout(() => {
           onLoginSuccess(result.user!);
-        }, 600);
+        }, 400);
       } catch (err: any) {
         setErrorMessage('Ocurrió un error al procesar el registro.');
         setIsLoading(false);
@@ -125,10 +127,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         }
 
         saveActiveSession(result.user, rememberMe);
+        setIsSuccessEntering(true);
         setSuccessMessage('¡Autenticación exitosa! Iniciando sesión...');
         setTimeout(() => {
           onLoginSuccess(result.user!);
-        }, 500);
+        }, 400);
       } catch (err: any) {
         setErrorMessage('Error al validar credenciales en la base de datos.');
         setIsLoading(false);
@@ -139,7 +142,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#f5f5f7] dark:bg-[#000000] text-[#1d1d1f] dark:text-[#f5f5f7] transition-colors duration-200">
       {/* LEFT COLUMN: AUTH CARD */}
-      <div className="w-full lg:w-[48%] xl:w-[45%] flex flex-col justify-between p-6 sm:p-10 md:p-14 lg:p-16 bg-white dark:bg-[#121214] border-r border-black/[0.06] dark:border-white/[0.08] shadow-xl lg:shadow-none z-10 transition-colors">
+      <div className={`w-full lg:w-[48%] xl:w-[45%] flex flex-col justify-between p-6 sm:p-10 md:p-14 lg:p-16 bg-white dark:bg-[#121214] border-r border-black/[0.06] dark:border-white/[0.08] shadow-xl lg:shadow-none z-10 transition-all duration-300 ${
+        isSuccessEntering ? 'opacity-90 scale-[0.99] pointer-events-none' : ''
+      }`}>
         <div>
           {/* Top Bar: Logo + Theme Switcher */}
           <div className="flex items-center justify-between mb-8 sm:mb-10">
@@ -428,10 +433,19 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             {/* Primary Submit Button - Apple Blue Button */}
             <button
               type="submit"
-              disabled={isLoading}
-              className="w-full mt-2 py-3 px-4 bg-[#0071e3] hover:bg-[#0077ed] active:scale-[0.99] disabled:opacity-60 text-white font-semibold rounded-full flex items-center justify-center gap-3 transition-all duration-200 shadow-sm group cursor-pointer"
+              disabled={isLoading || isSuccessEntering}
+              className={`w-full mt-2 py-3 px-4 ${
+                isSuccessEntering
+                  ? 'bg-emerald-600 shadow-emerald-500/25'
+                  : 'bg-[#0071e3] hover:bg-[#0077ed]'
+              } active:scale-[0.99] disabled:opacity-80 text-white font-semibold rounded-full flex items-center justify-center gap-3 transition-all duration-300 shadow-sm group cursor-pointer`}
             >
-              {isLoading ? (
+              {isSuccessEntering ? (
+                <>
+                  <CheckCircle2 className="w-5 h-5 text-white animate-pulse" />
+                  <span>¡Acceso Concedido! Iniciando...</span>
+                </>
+              ) : isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span>Verificando credenciales...</span>
