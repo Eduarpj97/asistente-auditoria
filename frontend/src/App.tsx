@@ -435,9 +435,7 @@ export default function App() {
   }
 
   return (
-    <div className={`min-h-screen bg-[#f5f5f7] dark:bg-[#000000] text-[#1d1d1f] dark:text-[#f5f5f7] flex flex-col selection:bg-[#0071e3] selection:text-white transition-colors duration-200 ${
-      loginTransitionUser ? 'pointer-events-none' : 'animate-in fade-in duration-500'
-    }`}>
+    <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#000000] text-[#1d1d1f] dark:text-[#f5f5f7] flex flex-col selection:bg-[#0071e3] selection:text-white transition-colors duration-200">
       {/* Animación cinemática de bienvenida y entrada a Audiflow */}
       {loginTransitionUser && (
         <LoginTransition

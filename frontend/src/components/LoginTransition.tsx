@@ -68,23 +68,27 @@ export const LoginTransition: React.FC<LoginTransitionProps> = ({
     } else {
       setCurrentStepIndex(3);
     }
+  }, [progress]);
 
-    // Al llegar al 100%, iniciar transición de salida suave
-    if (progress >= 100 && !isClosing) {
-      const exitTimer = setTimeout(() => {
-        setIsClosing(true);
-      }, 150);
-
+  useEffect(() => {
+    // Al alcanzar el 100%, iniciar desvanecimiento de salida y desmontar
+    if (progress >= 100) {
+      setIsClosing(true);
       const finishTimer = setTimeout(() => {
         onComplete();
-      }, 750); // 150ms espera + 600ms transición de desvanecimiento
-
-      return () => {
-        clearTimeout(exitTimer);
-        clearTimeout(finishTimer);
-      };
+      }, 550);
+      return () => clearTimeout(finishTimer);
     }
-  }, [progress, isClosing, onComplete]);
+  }, [progress, onComplete]);
+
+  // Watchdog de seguridad incondicional: garantiza que bajo cualquier circunstancia
+  // la interfaz quede 100% interactiva en un máximo de 2.2 segundos
+  useEffect(() => {
+    const watchdogTimer = setTimeout(() => {
+      onComplete();
+    }, 2200);
+    return () => clearTimeout(watchdogTimer);
+  }, [onComplete]);
 
   const activeStep = STEPS[currentStepIndex] || STEPS[0];
   const StepIcon = activeStep.icon;
