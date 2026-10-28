@@ -231,7 +231,7 @@ def _process_audit_pipeline(pdf_bytes: bytes, filename: str, use_llm: bool) -> d
     # 2. Inferencia semántica con Llama 3.1 en VPS
     llm_assessment = None
     if use_llm:
-        llm_assessment = llm_service.analyze_contract_semantics(raw_text)
+        llm_assessment = llm_service.analyze_contract_semantics(raw_text, chunks=chunks)
 
     # 3. Guardar automáticamente en SQLite / Supabase
     db_result = db_service.save_audit(

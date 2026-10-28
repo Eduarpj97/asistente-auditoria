@@ -5,7 +5,7 @@ import time
 import subprocess
 import urllib.request
 import urllib.error
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple, List
 import re
 
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://132.145.198.1:11434")
@@ -84,6 +84,71 @@ class LLMAuditService:
 
         # Retornar base_url por defecto como fallback
         return self.base_url
+
+    def build_smart_contract_digest(self, full_text: str, chunks: Optional[List[str]] = None, max_chars: int = 8000) -> str:
+        """
+        Smart Chunking: Para contratos extensos (+10 o 20 páginas), ensambla un extracto inteligente
+        con el inicio estructural (partes, objeto, vigencia) y los fragmentos más críticos
+        con cláusulas de riesgo (penalidades, terminación, multas, exclusividad, responsabilidad).
+        """
+        if not full_text:
+            return ""
+
+        # Si el contrato es corto (cabe completo en max_chars), usarlo directo
+        if len(full_text) <= max_chars:
+            return self._sanitize_text(full_text, max_chars)
+
+        # Si no se suministran chunks, dividirlos por párrafos
+        if not chunks:
+            raw_chunks = re.split(r'\n\s*\n', full_text)
+            chunks = [c.strip() for c in raw_chunks if len(c.strip()) > 30]
+
+        if not chunks:
+            return self._sanitize_text(full_text, max_chars)
+
+        # 1. Base fija: los primeros chunks (usualmente las primeras 2 páginas con partes y objeto)
+        selected_chunks = []
+        current_len = 0
+        budget_head = int(max_chars * 0.45) # ~3600 caracteres para el encabezado
+
+        for idx, chunk in enumerate(chunks):
+            if current_len + len(chunk) <= budget_head or idx < 2:
+                selected_chunks.append(chunk)
+                current_len += len(chunk)
+            else:
+                break
+
+        # 2. Búsqueda semántica de chunks con términos de alta sensibilidad en el resto del contrato
+        risk_keywords = re.compile(
+            r'penalidad|sanci[oó]n|multa|mora|indemnizaci[oó]n|rescisi[oó]n|resoluci[oó]n|'
+            r'terminaci[oó]n\s+anticipada|exoneraci[oó]n|responsabilidad|inmunidad|dolo|'
+            r'renovaci[oó]n\s+autom[aá]tica|exclusividad|confidencialidad|fuero|jurisdicci[oó]n|'
+            r'tribunal|arbitral|lista\s+restrictiva|ofac|lavado|corrupci[oó]n',
+            re.IGNORECASE
+        )
+
+        remaining_chunks = chunks[len(selected_chunks):]
+        scored_chunks = []
+
+        for ch in remaining_chunks:
+            matches = len(risk_keywords.findall(ch))
+            if matches > 0:
+                scored_chunks.append((matches, ch))
+
+        # Ordenar chunks por mayor densidad de cláusulas de riesgo
+        scored_chunks.sort(key=lambda x: x[0], reverse=True)
+
+        # Agregar los fragmentos más críticos respetando el presupuesto total de caracteres
+        for _, ch in scored_chunks:
+            if current_len + len(ch) + 4 <= max_chars:
+                selected_chunks.append(ch)
+                current_len += len(ch)
+            if current_len >= max_chars:
+                break
+
+        # Ensamblar el concentrado inteligente
+        digest = "\n\n[...]\n\n".join(selected_chunks)
+        return self._sanitize_text(digest, max_chars)
 
     def _sanitize_text(self, text: str, max_chars: int = 10000) -> str:
         """
@@ -326,12 +391,12 @@ class LLMAuditService:
             "- EQUILIBRIO CONTRACTUAL: Nulidad absoluta de cláusulas que exoneren de responsabilidad por dolo o culpa grave. SLAs con compensación económica obligatoria.\n"
         )
 
-    def analyze_contract_semantics(self, contract_text: str, max_chars: int = 8000) -> Dict[str, Any]:
+    def analyze_contract_semantics(self, contract_text: str, chunks: Optional[List[str]] = None, max_chars: int = 8000) -> Dict[str, Any]:
         """
         Envía el contrato al modelo Llama 3.1 para auditoría semántica profunda aplicando las normativas 2026
         con arnés estricto anti-alucinaciones y verificación cruzada en tiempo real.
         """
-        sample_text = self._sanitize_text(contract_text, max_chars)
+        sample_text = self.build_smart_contract_digest(contract_text, chunks=chunks, max_chars=max_chars)
         normativas_ref = self.get_normativa_2026_summary()
 
         system_prompt = (
@@ -402,7 +467,7 @@ class LLMAuditService:
                     content = raw_data.get("message", {}).get("content", "{}")
                     parsed_result = self._parse_json_resilient(content, sample_text)
                     # Aplicar arnés de verificación cruzada de evidencias
-                    harnessed_result = self.apply_anti_hallucination_harness(parsed_result, sample_text)
+                    harnessed_result = self.apply_anti_hallucination_harness(parsed_result, contract_text)
                     return {
                         "exito": True,
                         "motor": f"Ollama ({self.model})",
