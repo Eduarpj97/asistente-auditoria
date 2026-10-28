@@ -85,7 +85,7 @@ class LLMAuditService:
         # Retornar base_url por defecto como fallback
         return self.base_url
 
-    def _sanitize_text(self, text: str, max_chars: int = 3500) -> str:
+    def _sanitize_text(self, text: str, max_chars: int = 10000) -> str:
         """
         Sanitiza el texto extraído del contrato para evitar que secuencias de escape
         inválidas o caracteres no imprimibles corrompan el decodificador JSON de Ollama.
@@ -326,7 +326,7 @@ class LLMAuditService:
             "- EQUILIBRIO CONTRACTUAL: Nulidad absoluta de cláusulas que exoneren de responsabilidad por dolo o culpa grave. SLAs con compensación económica obligatoria.\n"
         )
 
-    def analyze_contract_semantics(self, contract_text: str, max_chars: int = 2500) -> Dict[str, Any]:
+    def analyze_contract_semantics(self, contract_text: str, max_chars: int = 8000) -> Dict[str, Any]:
         """
         Envía el contrato al modelo Llama 3.1 para auditoría semántica profunda aplicando las normativas 2026
         con arnés estricto anti-alucinaciones y verificación cruzada en tiempo real.
@@ -381,8 +381,8 @@ class LLMAuditService:
             "keep_alive": -1,
             "options": {
                 "temperature": 0.1,  # Fidelidad máxima
-                "num_ctx": 1536,     # Tamaño óptimo para procesar en CPU ARM
-                "num_predict": 350,  # Presupuesto conciso para respuesta rápida sin timeout (<45s)
+                "num_ctx": 4096,     # Tamaño óptimo para procesar en CPU ARM
+                "num_predict": 600,  # Presupuesto conciso para respuesta rápida sin timeout (<45s)
                 "num_thread": 4      # Utilizar los 4 núcleos completos de la CPU ARM Ampere A1
             }
         }
