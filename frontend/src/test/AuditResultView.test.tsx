@@ -89,7 +89,7 @@ describe('Componente AuditResultView', () => {
     );
 
     expect(screen.getByText('78')).toBeInTheDocument();
-    expect(screen.getByText('Riesgo Crítico')).toBeInTheDocument();
+    expect(screen.getAllByText(/Riesgo Crítico/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it('debe permitir cambiar de pestaña a la Matriz de Riesgos y visualizar la vulnerabilidad PRIV_001', () => {

@@ -87,6 +87,40 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
   const isRiskHigh = audit.overallRiskScore > 60;
   const isRiskMedium = audit.overallRiskScore > 35 && audit.overallRiskScore <= 60;
 
+  const translateSeverityES = (sev: string): string => {
+    switch (sev?.toLowerCase()) {
+      case 'critical':
+        return 'Crítico';
+      case 'high':
+        return 'Alto';
+      case 'medium':
+        return 'Medio';
+      case 'low':
+        return 'Bajo';
+      default:
+        return sev || 'Medio';
+    }
+  };
+
+  const translateCategoryES = (cat: string): string => {
+    const map: Record<string, string> = {
+      confidencialidad: 'Confidencialidad',
+      penalizaciones: 'Penalizaciones y Multas',
+      propiedad_intelectual: 'Propiedad Intelectual',
+      terminacion: 'Terminación Anticipada',
+      responsabilidad: 'Responsabilidad Civil',
+      pagos: 'Condiciones de Pago',
+      garantias: 'Garantías y SLAs',
+      jurisdiccion: 'Ley y Jurisdicción',
+      proteccion_datos: 'Protección de Datos',
+      seguridad_informacion: 'Seguridad de la Información',
+      anticorrupcion_etica: 'Anticorrupción y Ética',
+      aml_cft: 'Prevención LA/FT (AML)',
+      otros: 'Otras Estipulaciones',
+    };
+    return map[cat?.toLowerCase()] || cat.replace(/_/g, ' ');
+  };
+
   return (
     <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-200">
       {/* Top Navigation & Action Header */}
@@ -438,24 +472,24 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
                               {clause.title}
                             </h3>
                             <span className="text-[10px] font-medium text-[#86868b] uppercase tracking-wider">
-                              Categoría: {clause.category.replace('_', ' ')}
+                              Categoría: {translateCategoryES(clause.category)}
                             </span>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-2">
                           <span
-                            className={`px-2.5 py-0.5 rounded-full text-xs font-medium uppercase tracking-wider ${
+                            className={`px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider ${
                               clause.riskLevel === 'critical'
-                                ? 'bg-[#ff3b30] text-white'
+                                ? 'bg-[#ff3b30] text-white shadow-xs'
                                 : clause.riskLevel === 'high'
-                                ? 'bg-red-50 dark:bg-red-950/60 text-[#ff3b30]'
+                                ? 'bg-red-500/15 text-[#ff3b30] border border-red-500/30'
                                 : clause.riskLevel === 'medium'
-                                ? 'bg-amber-50 dark:bg-amber-950/60 text-[#ff9500]'
-                                : 'bg-emerald-50 dark:bg-emerald-950/60 text-[#34c759]'
+                                ? 'bg-amber-500/15 text-[#ff9500] border border-amber-500/30'
+                                : 'bg-emerald-500/15 text-[#34c759] border border-emerald-500/30'
                             }`}
                           >
-                            Riesgo {clause.riskLevel}
+                            Riesgo {translateSeverityES(clause.riskLevel)}
                           </span>
                           <span
                             className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
@@ -552,13 +586,13 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
                   <span
                     className={`px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase ${
                       risk.severity === 'critical'
-                        ? 'bg-[#ff3b30] text-white'
+                        ? 'bg-[#ff3b30] text-white shadow-xs'
                         : risk.severity === 'high'
-                        ? 'bg-red-50 dark:bg-red-950/60 text-[#ff3b30]'
-                        : 'bg-amber-50 dark:bg-amber-950/60 text-[#ff9500]'
+                        ? 'bg-red-500/15 text-[#ff3b30] border border-red-500/30'
+                        : 'bg-amber-500/15 text-[#ff9500] border border-amber-500/30'
                     }`}
                   >
-                    Severidad: {risk.severity}
+                    Severidad: {translateSeverityES(risk.severity)}
                   </span>
                 </div>
                 {(risk.exactLocation || risk.legalReference) && (
