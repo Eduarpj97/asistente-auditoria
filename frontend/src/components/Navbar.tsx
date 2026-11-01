@@ -17,9 +17,12 @@ import {
   Moon,
   Monitor,
   Palette,
+  CheckCircle2,
+  Sparkles,
+  Check,
 } from 'lucide-react';
 import { AudiflowLogo } from './AudiflowLogo';
-import { User, KeyDeadline } from '../types/audit';
+import { User, KeyDeadline, ContractAudit, AppNotification } from '../types/audit';
 import { UserProfileModal, UserModalTab, ThemeSetting } from './UserProfileModal';
 
 export type NavTab = 'dashboard' | 'upload' | 'history' | 'alerts' | 'detail';
@@ -30,7 +33,12 @@ interface NavbarProps {
   user: User;
   onLogout: () => void;
   deadlines: KeyDeadline[];
+  audits?: ContractAudit[];
+  notifications?: AppNotification[];
   onSelectDeadline?: (deadline: KeyDeadline) => void;
+  onSelectAuditById?: (contractId: string) => void;
+  onMarkNotificationAsRead?: (id: string) => void;
+  onClearNotifications?: () => void;
   onUserUpdated?: (user: User) => void;
   theme?: ThemeSetting;
   effectiveTheme?: 'light' | 'dark';
@@ -43,7 +51,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   user,
   onLogout,
   deadlines,
+  audits = [],
+  notifications = [],
   onSelectDeadline,
+  onSelectAuditById,
+  onMarkNotificationAsRead,
+  onClearNotifications,
   onUserUpdated,
   theme = 'system',
   effectiveTheme = 'light',
@@ -51,6 +64,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [notifFilter, setNotifFilter] = useState<'all' | 'audits' | 'deadlines'>('all');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [userModalTab, setUserModalTab] = useState<UserModalTab>('profile');
@@ -64,10 +78,60 @@ export const Navbar: React.FC<NavbarProps> = ({
     setIsProfileOpen(false);
   };
 
-  // Urgent and warning deadlines count
-  const urgentCount = deadlines.filter((d) => d.urgency === 'urgent' && !d.dismissed).length;
-  const warningCount = deadlines.filter((d) => d.urgency === 'warning' && !d.dismissed).length;
-  const totalAlerts = urgentCount + warningCount;
+  // Cálculo dinámico de contratos vencidos o próximos a expirar sobre toda la base de contratos del auditor
+  const contractExpirationAlerts = React.useMemo(() => {
+    if (!audits || audits.length === 0) return [];
+    const now = Date.now();
+    const results: Array<{
+      contractId: string;
+      contractTitle: string;
+      expirationDate: string;
+      daysRemaining: number;
+      urgency: 'urgent' | 'warning' | 'normal';
+      statusLabel: string;
+    }> = [];
+
+    audits.forEach((audit) => {
+      if (!audit.expirationDate) return;
+      const expTime = new Date(audit.expirationDate).getTime();
+      if (isNaN(expTime)) return;
+
+      const diffDays = Math.ceil((expTime - now) / (1000 * 60 * 60 * 24));
+      // Monitorear contratos vencidos o que vencen en los próximos 60 días
+      if (diffDays <= 60) {
+        let urgency: 'urgent' | 'warning' | 'normal' = 'normal';
+        let statusLabel = `Vence en ${diffDays} días`;
+
+        if (diffDays < 0) {
+          urgency = 'urgent';
+          statusLabel = `Vencido hace ${Math.abs(diffDays)} días`;
+        } else if (diffDays <= 15) {
+          urgency = 'urgent';
+          statusLabel = diffDays === 0 ? '¡Vence hoy!' : `Vence en ${diffDays} días (Crítico)`;
+        } else if (diffDays <= 30) {
+          urgency = 'warning';
+          statusLabel = `Vence en ${diffDays} días (Preaviso)`;
+        }
+
+        results.push({
+          contractId: audit.id,
+          contractTitle: audit.contractTitle,
+          expirationDate: audit.expirationDate,
+          daysRemaining: diffDays,
+          urgency,
+          statusLabel,
+        });
+      }
+    });
+
+    // Ordenar de mayor a menor urgencia
+    return results.sort((a, b) => a.daysRemaining - b.daysRemaining);
+  }, [audits]);
+
+  // Contadores reactivos
+  const unreadNotifs = notifications.filter((n) => !n.read);
+  const urgentDeadlines = contractExpirationAlerts.filter((c) => c.urgency === 'urgent');
+  const totalBadgeCount = unreadNotifs.length + urgentDeadlines.length;
 
   // Click outside listener for dropdowns
   useEffect(() => {
@@ -159,57 +223,150 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
               )}
 
-              {/* Campana de Alertas de Vencimiento (Único acceso a alertas como solicitado) */}
+              {/* Campana de Notificaciones & Control de Riesgos Contractuales */}
               <div className="relative" ref={notifRef}>
                 <button
                   type="button"
                   onClick={() => setIsNotifOpen(!isNotifOpen)}
                   className={`relative p-2 rounded-full transition-all focus:outline-none cursor-pointer ${
-                    currentTab === 'alerts'
+                    isNotifOpen || currentTab === 'alerts'
                       ? 'text-[#0071e3] bg-blue-50 dark:bg-blue-950/40'
                       : 'text-[#86868b] hover:text-[#1d1d1f] dark:text-[#98989d] dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.08]'
                   }`}
-                  aria-label="Campana de alertas de vencimiento"
-                  title="Alertas de Vencimiento"
+                  aria-label="Campana de notificaciones y alertas"
+                  title="Centro de Notificaciones y Vencimientos"
                 >
                   <Bell className="w-4 h-4" />
-                  {totalAlerts > 0 && (
+                  {totalBadgeCount > 0 && (
                     <span className="absolute top-1 right-1 flex h-4 w-4">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ff3b30] opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-4 w-4 bg-[#ff3b30] text-[9px] font-bold text-white items-center justify-center">
-                        {totalAlerts}
+                      <span className="relative inline-flex rounded-full h-4 w-4 bg-[#ff3b30] text-[9px] font-bold text-white items-center justify-center shadow-xs">
+                        {totalBadgeCount > 9 ? '9+' : totalBadgeCount}
                       </span>
                     </span>
                   )}
                 </button>
 
-                {/* Notification Dropdown Panel */}
+                {/* Centro de Notificaciones Desplegable Apple Glass */}
                 {isNotifOpen && (
-                  <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-black/[0.06] dark:border-white/[0.1] py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                    <div className="px-4 py-2 border-b border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between">
-                      <div>
-                        <h4 className="text-sm font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">Alertas de Vencimiento</h4>
-                        <p className="text-[11px] text-[#86868b]">
-                          {totalAlerts} plazos prioritarios requieren acción
-                        </p>
+                  <div className="absolute right-0 mt-2 w-80 sm:w-[410px] bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl rounded-2xl shadow-2xl border border-black/[0.06] dark:border-white/[0.1] py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    {/* Header */}
+                    <div className="px-4 py-2 border-b border-black/[0.06] dark:border-white/[0.08]">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="text-sm font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] flex items-center gap-1.5">
+                            <Bell className="w-3.5 h-3.5 text-[#0071e3]" />
+                            Notificaciones & Vencimientos
+                          </h4>
+                          <p className="text-[11px] text-[#86868b] mt-0.5">
+                            {totalBadgeCount > 0
+                              ? `${totalBadgeCount} avisos prioritarios requieren atención`
+                              : 'Todo al día en auditorías y plazos'}
+                          </p>
+                        </div>
+
+                        {onClearNotifications && notifications.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={onClearNotifications}
+                            className="text-[11px] font-medium text-[#0071e3] hover:underline cursor-pointer"
+                          >
+                            Limpiar
+                          </button>
+                        )}
                       </div>
-                      <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-red-50 dark:bg-red-950/50 text-[#ff3b30] border border-red-200 dark:border-red-900/50">
-                        En tiempo real
-                      </span>
+
+                      {/* Filtros Píldora: Todas | Auditorías | Vencimientos */}
+                      <div className="flex items-center bg-black/[0.04] dark:bg-white/[0.06] p-0.5 rounded-full mt-2.5 text-xs">
+                        <button
+                          type="button"
+                          onClick={() => setNotifFilter('all')}
+                          className={`flex-1 py-1 rounded-full text-center font-medium transition-all cursor-pointer ${
+                            notifFilter === 'all'
+                              ? 'bg-white dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-white shadow-xs'
+                              : 'text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white'
+                          }`}
+                        >
+                          Todas ({notifications.length + contractExpirationAlerts.length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNotifFilter('audits')}
+                          className={`flex-1 py-1 rounded-full text-center font-medium transition-all cursor-pointer ${
+                            notifFilter === 'audits'
+                              ? 'bg-white dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-white shadow-xs'
+                              : 'text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white'
+                          }`}
+                        >
+                          Auditorías ({notifications.length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNotifFilter('deadlines')}
+                          className={`flex-1 py-1 rounded-full text-center font-medium transition-all cursor-pointer ${
+                            notifFilter === 'deadlines'
+                              ? 'bg-white dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-white shadow-xs'
+                              : 'text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white'
+                          }`}
+                        >
+                          Vencimientos ({contractExpirationAlerts.length})
+                        </button>
+                      </div>
                     </div>
 
-                    <div className="max-h-72 overflow-y-auto divide-y divide-black/[0.04] dark:divide-white/[0.06]">
-                      {deadlines.length === 0 ? (
-                        <div className="p-6 text-center text-[#86868b] text-xs">
-                          No hay alertas de vencimiento pendientes.
-                        </div>
-                      ) : (
-                        deadlines.slice(0, 5).map((dl, idx) => (
+                    {/* Lista Dinámica de Notificaciones y Vencimientos */}
+                    <div className="max-h-80 overflow-y-auto divide-y divide-black/[0.04] dark:divide-white/[0.06]">
+                      {/* 1. SECCIÓN: AUDITORÍAS COMPLETADAS O EN CURSO */}
+                      {(notifFilter === 'all' || notifFilter === 'audits') &&
+                        notifications.map((notif) => (
                           <div
-                            key={dl.id || idx}
+                            key={notif.id}
                             onClick={() => {
-                              if (onSelectDeadline) onSelectDeadline(dl);
-                              onTabChange('alerts');
+                              if (notif.contractId && onSelectAuditById) {
+                                onSelectAuditById(notif.contractId);
+                              }
+                              if (onMarkNotificationAsRead) {
+                                onMarkNotificationAsRead(notif.id);
+                              }
+                              setIsNotifOpen(false);
+                            }}
+                            className={`p-3.5 hover:bg-black/[0.03] dark:hover:bg-white/[0.04] cursor-pointer transition-colors ${
+                              !notif.read ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''
+                            }`}
+                          >
+                            <div className="flex items-start gap-2.5">
+                              <div className="p-1.5 rounded-full shrink-0 bg-emerald-100 dark:bg-emerald-950/60 text-[#34c759]">
+                                <Sparkles className="w-3.5 h-3.5" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-1">
+                                  <p className="text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] truncate">
+                                    {notif.title}
+                                  </p>
+                                  {!notif.read && (
+                                    <span className="w-2 h-2 rounded-full bg-[#0071e3] shrink-0" />
+                                  )}
+                                </div>
+                                <p className="text-[11px] text-[#86868b] dark:text-[#a1a1a6] line-clamp-2 mt-0.5">
+                                  {notif.message}
+                                </p>
+                                <div className="flex items-center gap-2 mt-1.5 text-[10px] text-[#86868b]">
+                                  <span className="text-[#0071e3] font-medium">Ver dictamen ➔</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+
+                      {/* 2. SECCIÓN: CONTRATOS PRÓXIMOS A VENCER O VENCIDOS */}
+                      {(notifFilter === 'all' || notifFilter === 'deadlines') &&
+                        contractExpirationAlerts.map((item) => (
+                          <div
+                            key={`exp-${item.contractId}`}
+                            onClick={() => {
+                              if (onSelectAuditById) {
+                                onSelectAuditById(item.contractId);
+                              }
                               setIsNotifOpen(false);
                             }}
                             className="p-3.5 hover:bg-black/[0.03] dark:hover:bg-white/[0.04] cursor-pointer transition-colors"
@@ -217,62 +374,81 @@ export const Navbar: React.FC<NavbarProps> = ({
                             <div className="flex items-start gap-2.5">
                               <div
                                 className={`p-1.5 rounded-full shrink-0 ${
-                                  dl.urgency === 'urgent'
+                                  item.urgency === 'urgent'
                                     ? 'bg-red-100 dark:bg-red-950/60 text-[#ff3b30]'
-                                    : dl.urgency === 'warning'
+                                    : item.urgency === 'warning'
                                     ? 'bg-amber-100 dark:bg-amber-950/60 text-[#ff9500]'
                                     : 'bg-blue-100 dark:bg-blue-950/60 text-[#0071e3]'
                                 }`}
                               >
-                                {dl.urgency === 'urgent' ? (
+                                {item.urgency === 'urgent' ? (
                                   <AlertTriangle className="w-3.5 h-3.5" />
                                 ) : (
                                   <Clock className="w-3.5 h-3.5" />
                                 )}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] truncate">
-                                  {dl.title}
-                                </p>
-                                <p className="text-[11px] text-[#86868b] line-clamp-1 mt-0.5">
-                                  {dl.description}
-                                </p>
-                                <div className="flex items-center gap-2 mt-1.5 text-[10px] text-[#86868b] font-medium">
-                                  <span className="text-[#0071e3] font-semibold">{dl.date}</span>
-                                  <span>•</span>
+                                <div className="flex items-center justify-between gap-1">
+                                  <p className="text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] truncate">
+                                    {item.contractTitle}
+                                  </p>
                                   <span
-                                    className={
-                                      dl.urgency === 'urgent'
-                                        ? 'text-[#ff3b30] font-semibold'
-                                        : 'text-[#ff9500]'
-                                    }
+                                    className={`px-1.5 py-0.5 text-[9px] font-semibold rounded-full shrink-0 ${
+                                      item.urgency === 'urgent'
+                                        ? 'bg-red-100 dark:bg-red-950/70 text-[#ff3b30]'
+                                        : item.urgency === 'warning'
+                                        ? 'bg-amber-100 dark:bg-amber-950/70 text-[#ff9500]'
+                                        : 'bg-blue-100 dark:bg-blue-950/70 text-[#0071e3]'
+                                    }`}
                                   >
-                                    {dl.daysRemaining !== undefined
-                                      ? dl.daysRemaining <= 0
-                                      ? 'Vence hoy'
-                                      : `Quedan ${dl.daysRemaining} días`
-                                      : 'Próximo'}
+                                    {item.statusLabel}
                                   </span>
+                                </div>
+                                <p className="text-[11px] text-[#86868b] dark:text-[#a1a1a6] mt-0.5">
+                                  Vencimiento formal pactado para el {item.expirationDate}.
+                                </p>
+                                <div className="flex items-center gap-2 mt-1 text-[10px] text-[#0071e3] font-medium">
+                                  <span>Abrir expediente ➔</span>
                                 </div>
                               </div>
                             </div>
                           </div>
-                        ))
+                        ))}
+
+                      {/* Estado Vacío */}
+                      {((notifFilter === 'all' &&
+                        notifications.length === 0 &&
+                        contractExpirationAlerts.length === 0) ||
+                        (notifFilter === 'audits' && notifications.length === 0) ||
+                        (notifFilter === 'deadlines' &&
+                          contractExpirationAlerts.length === 0)) && (
+                        <div className="p-8 text-center text-[#86868b] text-xs">
+                          <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-[#34c759] opacity-70" />
+                          <p className="font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                            Sin alertas pendientes
+                          </p>
+                          <p className="text-[11px] mt-1">
+                            No hay contratos vencidos ni auditorías pendientes en este filtro.
+                          </p>
+                        </div>
                       )}
                     </div>
 
-                    <div className="px-4 pt-2 pb-1 border-t border-black/[0.06] dark:border-white/[0.08] text-center">
+                    {/* Footer con acceso al Calendario */}
+                    <div className="px-4 pt-2.5 pb-1 border-t border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between">
                       <button
                         type="button"
                         onClick={() => {
                           onTabChange('alerts');
                           setIsNotifOpen(false);
                         }}
-                        className="text-xs font-medium text-[#0071e3] hover:text-[#0077ed] flex items-center justify-center gap-1 mx-auto py-1 cursor-pointer"
+                        className="text-xs font-medium text-[#0071e3] hover:text-[#0077ed] flex items-center gap-1 cursor-pointer"
                       >
-                        <span>Ver todas las alertas en el calendario</span>
+                        <span>Ver calendario de plazos</span>
                         <ExternalLink className="w-3 h-3" />
                       </button>
+
+                      <span className="text-[10px] text-[#86868b]">Monitoreo 2026</span>
                     </div>
                   </div>
                 )}

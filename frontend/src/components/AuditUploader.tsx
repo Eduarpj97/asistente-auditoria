@@ -12,6 +12,9 @@ import {
   ArrowRight,
   ShieldAlert,
   Sliders,
+  Minimize2,
+  ExternalLink,
+  X,
 } from 'lucide-react';
 import {
   ContractAudit,
@@ -19,17 +22,27 @@ import {
   RiskItem,
   ClauseCategory,
   RiskSeverity,
+  BackgroundAuditTask,
 } from '../types/audit';
 import { SAMPLE_CONTRACT_TEXTS } from '../data/sampleAudits';
+import { executeContractAuditApi } from '../utils/auditProcessor';
 
 interface AuditUploaderProps {
   onAuditCompleted: (audit: ContractAudit) => void;
   currentUserEmail?: string;
+  onStartBackgroundAudit?: (fileToUpload: File | Blob, uploadFileName: string) => void;
+  activeTask?: BackgroundAuditTask | null;
+  onMinimizeAudit?: () => void;
+  onReopenAuditModal?: () => void;
 }
 
 export const AuditUploader: React.FC<AuditUploaderProps> = ({
   onAuditCompleted,
   currentUserEmail = 'eduardo.auditor@audiflow.com',
+  onStartBackgroundAudit,
+  activeTask,
+  onMinimizeAudit,
+  onReopenAuditModal,
 }) => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileBase64, setFileBase64] = useState<string | null>(null);
@@ -92,24 +105,7 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
       return;
     }
 
-    setIsAuditing(true);
     setErrorMessage('');
-
-    // Progression of descriptive scanning steps
-    const steps = [
-      'Extrayendo texto del contrato (OCR & Segmentación)...',
-      'Evaluando 14 Controles Regulatorios (RGPD, SARLAFT, FCPA, ISO 27001)...',
-      'Invocando inferencia semántica con Llama 3.1 8B en VPS de Oracle Cloud...',
-      'Analizando cláusulas abusivas, asimetrías y penalizaciones de SLA...',
-      'Consolidando dictamen jurídico y generando reporte de auditoría...',
-    ];
-
-    let currentStep = 0;
-    setAuditStep(steps[0]);
-    const stepInterval = setInterval(() => {
-      currentStep = (currentStep + 1) % steps.length;
-      setAuditStep(steps[currentStep]);
-    }, 3800);
 
     try {
       let fileToUpload: File | Blob;
@@ -129,286 +125,34 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
         fileToUpload = new File([pdfBlob], uploadFileName, { type: 'application/pdf' });
       }
 
-      // Preparar payload multipart para la API FastAPI
-      const formData = new FormData();
-      formData.append('file', fileToUpload, uploadFileName);
-      formData.append('use_llm', 'true');
-
-      const apiUrl = window.location.origin.includes(':3000')
-        ? 'http://127.0.0.1:8000/v1/audit-contract-ai'
-        : '/v1/audit-contract-ai';
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error(`El servidor respondió con código ${response.status}`);
+      // Si App.tsx orquesta la auditoría en segundo plano, delegarla para permitir navegación libre
+      if (onStartBackgroundAudit) {
+        onStartBackgroundAudit(fileToUpload, uploadFileName);
+        return;
       }
 
-      const data = await response.json();
+      // Fallback local execution
+      setIsAuditing(true);
+      const steps = [
+        'Extrayendo texto del contrato (OCR & Segmentación)...',
+        'Evaluando 14 Controles Regulatorios (RGPD, SARLAFT, FCPA, ISO 27001)...',
+        'Invocando inferencia semántica con Llama 3.1 8B en VPS de Oracle Cloud...',
+        'Analizando cláusulas abusivas, asimetrías y penalizaciones de SLA...',
+        'Consolidando dictamen jurídico y generando reporte de auditoría...',
+      ];
+
+      let currentStep = 0;
+      setAuditStep(steps[0]);
+      const stepInterval = setInterval(() => {
+        currentStep = (currentStep + 1) % steps.length;
+        setAuditStep(steps[currentStep]);
+      }, 3800);
+
+      const newAudit = await executeContractAuditApi(fileToUpload, uploadFileName, currentUserEmail);
       clearInterval(stepInterval);
-
-      // Extraer datos reales retornados por el backend
-      const ruleScoring = data.rule_scoring || {};
-      const aiLlm = data.ai_llm_analysis?.resultado_ia || {};
-      const criticalClauses = aiLlm.clausulas_criticas || [];
-      const ruleFindings = ruleScoring.findings || [];
-
-      // Calcular scores REALES del documento analizado (sin simulación)
-      // El backend retorna global_score (no total_score) en rule_scoring
-      const ruleEngineScore = typeof ruleScoring.global_score === 'number' ? ruleScoring.global_score : 0;
-      const iaScore = typeof aiLlm.score_riesgo_ia === 'number' ? aiLlm.score_riesgo_ia : 0;
-
-      // Priorizar IA si respondió, si no usar motor de reglas. NUNCA simular.
-      const overallRisk = iaScore > 0 ? iaScore : ruleEngineScore;
-      const compliance = Math.max(0, Math.min(100, 100 - overallRisk));
-
-      // Extraer cláusulas reales mapeadas con citas precisas y ubicaciones para revisión con lupa
-      const mappedClauses: AuditedClause[] = [];
-
-      // 1. Cláusulas críticas identificadas por Llama 3.1 con citas textuales reales
-      criticalClauses.forEach((c: any, idx: number) => {
-        const catMap: Record<string, ClauseCategory> = {
-          SLA: 'otros',
-          Penalidad: 'penalizaciones',
-          Renovacion: 'terminacion',
-          Responsabilidad: 'responsabilidad',
-          Privacidad: 'confidencialidad',
-          Jurisdiccion: 'jurisdiccion',
-          AML: 'otros',
-          Anticorrupcion: 'otros',
-        };
-
-        const sevMap: Record<string, RiskSeverity> = {
-          ALTO: 'critical',
-          MEDIO: 'high',
-          BAJO: 'medium',
-        };
-
-        const location = c.ubicacion_exacta || (c.tipo ? `Cláusula de ${c.tipo} / Sección Operativa` : 'Revisión en el texto del contrato');
-        const quote = c.cita_textual && c.cita_textual !== 'Cita textual analizada en el contrato.'
-          ? c.cita_textual
-          : 'Texto específico analizado en las estipulaciones del documento.';
-
-        const recommendationText =
-          c.recomendacion_legal ||
-          c.recomendacion_negociacion ||
-          'Revisar la estipulación en el documento original e incorporar salvaguardas de reciprocidad antes de firmar.';
-
-        mappedClauses.push({
-          id: `clause-llm-${idx + 1}`,
-          title: `[Auditoría] ${c.tipo || 'Cláusula Crítica'}: ${
-            c.explicacion_riesgo
-              ? c.explicacion_riesgo.substring(0, 65) + '...'
-              : 'Riesgo Detectado'
-          }`,
-          exactLocation: location,
-          originalSnippet: quote,
-          category: catMap[c.tipo] || 'otros',
-          riskLevel: sevMap[c.severidad] || 'high',
-          finding:
-            c.explicacion_riesgo ||
-            'Contingencia contractual identificada por el motor de inferencia semántica.',
-          legalReference: c.fundamento_normativo || 'Estatuto de Contratación Mercantil y Buenas Prácticas',
-          recommendation: recommendationText,
-          suggestedDrafting: c.redaccion_sugerida || (c.tipo ? `Se estipula que en caso de controversia sobre ${c.tipo}, las partes ajustarán sus obligaciones conforme a los principios de buena fe y reciprocidad económica.` : undefined),
-          compliant: false,
-        });
-      });
-
-      // 2. Hallazgos regulatorios del motor determinístico (RGPD, SARLAFT, anticorrupción, ISO 27001)
-      ruleFindings.forEach((rf: any, idx: number) => {
-        const isOmission = !rf.matched_snippet;
-        const locationText = isOmission
-          ? `[CONTROL OMITIDO] Sección ausente: Requiere inserción en acápite de ${rf.category || 'Cumplimiento Normativo'}`
-          : rf.chunk_index !== undefined
-          ? `Párrafo / Numeral ${rf.chunk_index + 1} del contrato`
-          : 'Estipulación identificada en el cuerpo del contrato';
-
-        const quoteText = isOmission
-          ? `[AUSENCIA NORMATIVA] El contrato no contiene ninguna disposición relativa a ${rf.title}. Se requiere incorporar la cláusula antes de la firma para evitar contingencias legales.`
-          : rf.matched_snippet;
-
-        mappedClauses.push({
-          id: `clause-rule-${idx + 1}`,
-          title: `[Regulación] ${rf.rule_id || 'Control'}: ${rf.description}`,
-          exactLocation: locationText,
-          originalSnippet: quoteText,
-          category: (rf.category?.toLowerCase() as ClauseCategory) || 'penalizaciones',
-          riskLevel: rf.score_impact > 20 ? 'critical' : rf.score_impact > 10 ? 'high' : 'medium',
-          finding: `${rf.description}`,
-          legalReference: rf.normative_reference || 'Marco normativo corporativo aplicable',
-          recommendation: rf.remediation || 'Alinear la redacción al marco normativo vigente para mitigar riesgos legales o regulatorios.',
-          compliant: false,
-        });
-      });
-
-      // Mapear matriz de riesgos identificados (con recomendación legal, ubicación y cita del original)
-      const mappedRisks: RiskItem[] = [];
-      criticalClauses.forEach((c: any) => {
-        const rec =
-          c.recomendacion_legal ||
-          c.recomendacion_negociacion ||
-          'Solicitar ajuste formal en el documento original o adenda previa a la firma.';
-
-        mappedRisks.push({
-          title: `Riesgo Contractual: ${c.tipo || 'Cláusula Crítica'}`,
-          severity: c.severidad === 'ALTO' ? 'critical' : 'high',
-          exactLocation: c.ubicacion_exacta || `Cláusula de ${c.tipo || 'Contrato'}`,
-          quoteSnippet: c.cita_textual,
-          description: c.explicacion_riesgo || 'Riesgo de asimetría o penalidad excesiva.',
-          legalReference: c.fundamento_normativo || 'Régimen de Obligaciones Mercantiles',
-          mitigation: rec,
-          suggestedDrafting: c.redaccion_sugerida,
-        });
-      });
-
-      ruleFindings.forEach((rf: any) => {
-        const isOmission = !rf.matched_snippet;
-        mappedRisks.push({
-          title: `Vulnerabilidad Normativa: ${rf.rule_id || 'Regulación'}`,
-          severity: rf.score_impact > 20 ? 'critical' : 'high',
-          exactLocation: isOmission
-            ? `[Omisión] Sección ausente en documento: Acápite de ${rf.category || 'Cumplimiento'}`
-            : rf.chunk_index !== undefined ? `Párrafo ${rf.chunk_index + 1} del documento original` : 'Texto del documento original',
-          quoteSnippet: rf.matched_snippet || undefined,
-          description: rf.description,
-          legalReference: rf.normative_reference || 'Normativa aplicable',
-          mitigation: rf.remediation || `Recomendación Legal: Incorporar cláusula de salvaguarda según ${rf.normative_reference || 'normativa aplicable'}.`,
-        });
-      });
-
-      // Título limpio y legible derivado del archivo real
-      const cleanTitle = uploadFileName.replace(/\.[^/.]+$/, '').replace(/_/g, ' ');
-      const cleanTitleFormatted = cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1);
-
-      // Generar Resumen en lenguaje simple sobre de qué trata el documento
-      const generateDetailedSummary = (): string => {
-        // Si la IA generó un buen resumen, usarlo directamente
-        if (aiLlm.resumen_ejecutivo && aiLlm.resumen_ejecutivo.length > 50 && !aiLlm.resumen_ejecutivo.includes('Llama 3.1') && !aiLlm.resumen_ejecutivo.includes('1. OBJETO')) {
-          return aiLlm.resumen_ejecutivo;
-        }
-
-        // Fallback: resumen básico en lenguaje simple basado en el nombre del archivo
-        return `Este documento (${cleanTitleFormatted}) es un acuerdo entre dos o más partes que establece las condiciones bajo las cuales se van a prestar servicios, entregar productos o cumplir compromisos comerciales. En él se definen los derechos y obligaciones de cada parte, las formas de pago, los plazos de ejecución, las reglas de confidencialidad y las consecuencias en caso de incumplimiento.`;
-      };
-
-      // Detección y explicación de la tipología contractual en lenguaje simple
-      const getContractTypology = (): { typology: string; explanation: string } => {
-        if (aiLlm.tipologia_contrato && aiLlm.explicacion_tipologia) {
-          return {
-            typology: aiLlm.tipologia_contrato,
-            explanation: aiLlm.explicacion_tipologia,
-          };
-        }
-
-        const combinedText = `${cleanTitleFormatted} ${uploadFileName} ${aiLlm.resumen_ejecutivo || ''}`.toLowerCase();
-
-        if (/arrendamiento|arrendador|arrendatario|canon|inmueble|locativo/.test(combinedText)) {
-          return {
-            typology: 'Contrato de Arrendamiento',
-            explanation:
-              'Es un acuerdo donde el dueño o administrador de un bien (arrendador) le permite a otra persona (arrendatario) usarlo y disfrutarlo temporalmente a cambio de un pago periódico (canon). No transfiere la propiedad del inmueble ni crea una relación laboral subordinada.',
-          };
-        }
-        if (/trabajo|laboral|empleador|trabajador|c[oó]digo sustantivo|subordinaci[oó]n|salario/.test(combinedText)) {
-          return {
-            typology: 'Contrato Individual de Trabajo',
-            explanation:
-              'Es un vínculo laboral formal donde una persona presta sus servicios personales bajo la continua subordinación y órdenes de un empleador, a cambio de un salario periódico y con derecho a prestaciones sociales y seguridad social obligatoria.',
-          };
-        }
-        if (/prestaci[oó]n de servicios|prestacion de servicios|contratista|honorarios|autonom[ií]a/.test(combinedText)) {
-          return {
-            typology: 'Contrato de Prestación de Servicios',
-            explanation:
-              'Es un acuerdo de naturaleza civil o comercial donde un profesional o empresa independiente se compromete a realizar una labor puntual a cambio de unos honorarios. El contratista trabaja con total autonomía técnica y no existe horario fijo ni relación de subordinación laboral.',
-          };
-        }
-        if (/confidencialidad|nda|no divulgaci[oó]n|secreto comercial/.test(combinedText)) {
-          return {
-            typology: 'Acuerdo de Confidencialidad (NDA)',
-            explanation:
-              'Es un compromiso legal preventivo que obliga a las partes a proteger la información privada, técnica, financiera o comercial que compartan, prohibiendo revelarla a terceros o usarla para fines no autorizados.',
-          };
-        }
-        if (/matr[ií]cula|academusoft|estudiante|semestre|educativo|asignatura/.test(combinedText)) {
-          return {
-            typology: 'Registro de Matrícula / Acuerdo Educativo',
-            explanation:
-              'Es un documento formal que vincula a un estudiante con una entidad educativa, detallando el plan académico, las asignaturas inscritas y los compromisos reglamentarios de formación y pago.',
-          };
-        }
-        if (/compraventa|suministro|proveedor|comprador|vendedor/.test(combinedText)) {
-          return {
-            typology: 'Contrato de Compraventa / Suministro',
-            explanation:
-              'Es un acuerdo comercial donde una parte se compromete a entregar mercancías, bienes o insumos de manera periódica o definitiva, y la otra parte se obliga a pagar el precio acordado.',
-          };
-        }
-        if (/software|saas|licencia|plataforma/.test(combinedText)) {
-          return {
-            typology: 'Contrato de Licenciamiento de Software / SaaS',
-            explanation:
-              'Es un contrato tecnológico donde el titular del software autoriza su uso a un cliente bajo condiciones específicas, conservando la propiedad intelectual y fijando reglas de disponibilidad y soporte.',
-          };
-        }
-
-        return {
-          typology: 'Contrato Comercial / Acuerdo General',
-          explanation:
-            'Es un acuerdo bilateral donde las partes definen sus compromisos mutuos, plazos de cumplimiento, condiciones de pago y responsabilidades legales para colaborar o llevar a cabo un negocio o servicio conjunto.',
-        };
-      };
-
-      const { typology, explanation } = getContractTypology();
-
-      const newAudit: ContractAudit = {
-        id: `aud-${Date.now()}`,
-        contractTitle: cleanTitleFormatted,
-        contractTypology: typology,
-        typologyExplanation: explanation,
-        documentType:
-          overallRisk > 70
-            ? 'Contrato de Alto Riesgo / Observado'
-            : overallRisk > 40
-            ? 'Contrato Comercial con Observaciones'
-            : 'Contrato de Bajo Riesgo / Conforme',
-        fileName: uploadFileName,
-        fileSize: selectedFile ? `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB` : '1.0 MB',
-        auditDate: new Date().toISOString().split('T')[0],
-        effectiveDate: new Date().toISOString().split('T')[0],
-        expirationDate: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString().split('T')[0],
-        renewalTerms: 'Sujeto a revisión anual previa notificación formal de 30 días.',
-        totalValue: 'Por determinar según ejecución de órdenes de servicio',
-        governingLaw: 'Jurisdicción Nacional Ordinaria',
-        overallRiskScore: overallRisk,
-        complianceScore: compliance,
-        status: overallRisk > 70 ? 'en_revision' : overallRisk > 40 ? 'auditado' : 'aprobado',
-        auditedBy: currentUserEmail,
-        summary: generateDetailedSummary(),
-        parties: [
-          { name: 'Entidad Contratante (Cliente)', role: 'Parte Contratante' },
-          { name: 'Empresa Prestadora / Proveedora', role: 'Contraparte' },
-        ],
-        clauses: mappedClauses,
-        risksIdentified: mappedRisks,
-        keyDeadlines: [],
-        missingEssentialClauses:
-          ruleScoring.missing_controls && ruleScoring.missing_controls.length > 0
-            ? ruleScoring.missing_controls
-            : [
-                'Cláusula de Protección de Datos Personales (RGPD / Habeas Data)',
-                'Cláusula de Anticorrupción y Prevención de Lavado de Activos',
-              ],
-      };
-
       setIsAuditing(false);
       onAuditCompleted(newAudit);
     } catch (err: any) {
-      clearInterval(stepInterval);
       console.error('Error invocando el backend de auditoría:', err);
       setErrorMessage(
         `Error al auditar el archivo con el backend: ${err.message}. Asegúrate de que el servidor en el puerto 8000 esté activo.`
@@ -419,6 +163,31 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-200">
+      {/* Banner de Auditoría en progreso si está minimizada */}
+      {activeTask && activeTask.status === 'auditing' && activeTask.isMinimized && (
+        <div className="p-4 rounded-2xl bg-blue-50/90 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-900/40 flex items-center justify-between gap-3 animate-in fade-in">
+          <div className="flex items-center gap-3 min-w-0">
+            <RefreshCw className="w-4 h-4 text-[#0071e3] animate-spin shrink-0" />
+            <div className="text-xs truncate">
+              <p className="font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                Auditoría en progreso:{' '}
+                <span className="font-normal text-[#86868b]">{activeTask.fileName}</span>
+              </p>
+              <p className="text-[#86868b] truncate mt-0.5">{activeTask.step}</p>
+            </div>
+          </div>
+          {onReopenAuditModal && (
+            <button
+              type="button"
+              onClick={onReopenAuditModal}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[#0071e3] text-white hover:bg-[#0077ed] transition-colors shrink-0 cursor-pointer"
+            >
+              Ver progreso
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Header */}
       <div className="text-center max-w-2xl mx-auto">
         <span className="text-[11px] font-medium uppercase tracking-wider text-[#0071e3] dark:text-[#2997ff] bg-blue-50 dark:bg-blue-950/40 px-3 py-1 rounded-full border border-blue-200/40 dark:border-blue-900/40 inline-flex items-center gap-1.5">
@@ -660,9 +429,21 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
       </div>
 
       {/* Progress Scanner Modal / Overlay during Audit */}
-      {isAuditing && (
+      {((activeTask && activeTask.status === 'auditing' && !activeTask.isMinimized) || isAuditing) && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl rounded-3xl p-8 max-w-md w-full shadow-2xl border border-black/[0.06] dark:border-white/[0.1] text-center space-y-6 animate-in zoom-in-95 duration-200">
+          <div className="relative bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-2xl rounded-3xl p-8 max-w-md w-full shadow-2xl border border-black/[0.06] dark:border-white/[0.1] text-center space-y-5 animate-in zoom-in-95 duration-200">
+            {/* Botón para minimizar y continuar navegando */}
+            {onMinimizeAudit && (
+              <button
+                type="button"
+                onClick={onMinimizeAudit}
+                title="Continuar navegando en segundo plano"
+                className="absolute top-4 right-4 p-1.5 rounded-full text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white hover:bg-black/[0.05] dark:hover:bg-white/[0.08] transition-colors cursor-pointer"
+              >
+                <Minimize2 className="w-4 h-4" />
+              </button>
+            )}
+
             <div className="relative w-20 h-20 mx-auto">
               <div className="w-20 h-20 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200/50 dark:border-blue-900/50 flex items-center justify-center text-[#0071e3]">
                 <FileText className="w-10 h-10 animate-pulse text-[#0071e3]" />
@@ -674,15 +455,17 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
               <h3 className="text-lg font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
                 Audiflow Motor de Auditoría
               </h3>
-              <p className="text-xs text-[#86868b] mt-1">
-                Analizando el documento con modelos especializados en derecho contractual y riesgos.
+              <p className="text-xs text-[#86868b] mt-1 truncate max-w-xs mx-auto">
+                {activeTask
+                  ? activeTask.fileName
+                  : 'Analizando el documento con modelos especializados en derecho contractual y riesgos.'}
               </p>
             </div>
 
             {/* Step Message */}
             <div className="p-3.5 rounded-xl bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.06] dark:border-white/[0.08] text-xs font-medium text-[#1d1d1f] dark:text-[#f5f5f7] flex items-center justify-center gap-2">
               <RefreshCw className="w-4 h-4 animate-spin text-[#0071e3] shrink-0" />
-              <span className="truncate">{auditStep}</span>
+              <span className="truncate">{activeTask ? activeTask.step : auditStep}</span>
             </div>
 
             {/* Animated progress bar */}
@@ -690,8 +473,20 @@ export const AuditUploader: React.FC<AuditUploaderProps> = ({
               <div className="h-full bg-gradient-to-r from-[#0071e3] to-[#5856d6] animate-[pulse_1.5s_infinite] w-full" />
             </div>
 
-            <p className="text-[11px] text-[#86868b]">
-              Por favor espera unos segundos mientras se auditan todas las cláusulas.
+            {/* Action button to minimize and continue browsing */}
+            {onMinimizeAudit && (
+              <button
+                type="button"
+                onClick={onMinimizeAudit}
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold text-[#0071e3] dark:text-[#2997ff] bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+              >
+                <Minimize2 className="w-3.5 h-3.5" />
+                <span>Navegar y revisar otros contratos en segundo plano</span>
+              </button>
+            )}
+
+            <p className="text-[11px] text-[#86868b] leading-relaxed">
+              Puedes cambiar de pestaña y continuar trabajando. Te avisaremos con una notificación y sonido en cuanto el dictamen esté listo.
             </p>
           </div>
         </div>

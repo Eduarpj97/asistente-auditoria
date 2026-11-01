@@ -89,3 +89,35 @@ export interface User {
 }
 
 export type DateFilterRange = 'today' | 'last7days' | 'thisMonth' | 'lastQuarter' | 'thisYear' | 'all';
+
+export type NotificationType =
+  | 'audit_completed'
+  | 'audit_failed'
+  | 'contract_expired'
+  | 'deadline_approaching';
+
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  timestamp: string; // ISO string
+  read: boolean;
+  contractId?: string;
+  auditId?: string;
+  urgency: 'urgent' | 'warning' | 'normal' | 'success';
+  daysRemaining?: number;
+  contractTitle?: string;
+}
+
+export interface BackgroundAuditTask {
+  id: string;
+  fileName: string;
+  status: 'auditing' | 'completed' | 'error';
+  step: string;
+  startTime: number;
+  isMinimized: boolean;
+  result?: ContractAudit;
+  error?: string;
+}
+

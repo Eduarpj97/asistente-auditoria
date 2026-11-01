@@ -7,9 +7,12 @@ import { AuditUploader } from './components/AuditUploader';
 import { AuditHistory } from './components/AuditHistory';
 import { AuditResultView } from './components/AuditResultView';
 import { DeadlineAlerts } from './components/DeadlineAlerts';
-import { ContractAudit, User, KeyDeadline } from './types/audit';
+import { ContractAudit, User, KeyDeadline, BackgroundAuditTask, AppNotification } from './types/audit';
 import { exportToPDF, exportToWord } from './utils/reportExporter';
-import { CheckCircle2, AlertCircle } from 'lucide-react';
+import { executeContractAuditApi } from './utils/auditProcessor';
+import { playNotificationSound } from './utils/soundNotification';
+import { BackgroundAuditWidget } from './components/BackgroundAuditWidget';
+import { CheckCircle2, AlertCircle, Sparkles, ArrowRight, X } from 'lucide-react';
 
 function getApiBase(): string {
   if (typeof window !== 'undefined') {
@@ -130,6 +133,27 @@ export default function App() {
   // Toast notification state
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'info' } | null>(null);
 
+  // Active background audit task state
+  const [activeAuditTask, setActiveAuditTask] = useState<BackgroundAuditTask | null>(null);
+
+  // Unified notifications pool (aislado estrictamente por usuario)
+  const [notifications, setNotifications] = useState<AppNotification[]>(() => {
+    try {
+      const savedUser = localStorage.getItem('audiflow_user') || sessionStorage.getItem('audiflow_user');
+      if (!savedUser) return [];
+      const user: User = JSON.parse(savedUser);
+      if (!user?.email) return [];
+      const saved = localStorage.getItem(`audiflow_notifs_${user.email.toLowerCase()}`);
+      if (!saved) return [];
+      return JSON.parse(saved);
+    } catch {
+      return [];
+    }
+  });
+
+  // Interactive completion notification banner (aviso de auditoría concluida)
+  const [completionNotification, setCompletionNotification] = useState<ContractAudit | null>(null);
+
   const showToast = (text: string, type: 'success' | 'info' = 'success') => {
     setToastMessage({ text, type });
     setTimeout(() => {
@@ -143,10 +167,11 @@ export default function App() {
       localStorage.setItem('audiflow_user', JSON.stringify(currentUser));
       localStorage.setItem(`audiflow_audits_${currentUser.email.toLowerCase()}`, JSON.stringify(audits));
       localStorage.setItem(`audiflow_deadlines_${currentUser.email.toLowerCase()}`, JSON.stringify(deadlines));
+      localStorage.setItem(`audiflow_notifs_${currentUser.email.toLowerCase()}`, JSON.stringify(notifications));
     } else {
       localStorage.removeItem('audiflow_user');
     }
-  }, [currentUser, audits, deadlines]);
+  }, [currentUser, audits, deadlines, notifications]);
 
   // Cierre de sesión automático por inactividad (15 minutos)
   useEffect(() => {
@@ -311,6 +336,13 @@ export default function App() {
     setSelectedAudit(null);
     setAudits([]);
     setDeadlines([]);
+    setNotifications([]);
+    setActiveAuditTask(null);
+    setCompletionNotification(null);
+    if (auditIntervalRef.current) {
+      clearInterval(auditIntervalRef.current);
+      auditIntervalRef.current = null;
+    }
     setInactivityNotice(null);
     localStorage.removeItem('audiflow_user');
     sessionStorage.removeItem('audiflow_user');
@@ -318,6 +350,96 @@ export default function App() {
     localStorage.removeItem('audiflow_deadlines');
     setCurrentTab('dashboard');
     showToast('Sesión cerrada correctamente.', 'info');
+  };
+
+  // Referencia para el intervalo del ciclo de pasos de la auditoría en segundo plano
+  const auditIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Iniciar auditoría asíncrona no bloqueante
+  const handleStartBackgroundAudit = async (fileToUpload: File | Blob, uploadFileName: string) => {
+    if (!currentUser?.email) return;
+
+    if (auditIntervalRef.current) {
+      clearInterval(auditIntervalRef.current);
+    }
+
+    const taskId = `task-${Date.now()}`;
+    const initialStep = 'Extrayendo texto del contrato (OCR & Segmentación)...';
+    setActiveAuditTask({
+      id: taskId,
+      fileName: uploadFileName,
+      status: 'auditing',
+      step: initialStep,
+      startTime: Date.now(),
+      isMinimized: false,
+    });
+
+    const steps = [
+      'Extrayendo texto del contrato (OCR & Segmentación)...',
+      'Evaluando 14 Controles Regulatorios (RGPD, SARLAFT, FCPA, ISO 27001)...',
+      'Invocando inferencia semántica con Llama 3.1 8B en VPS de Oracle Cloud...',
+      'Analizando cláusulas abusivas, asimetrías y penalizaciones de SLA...',
+      'Consolidando dictamen jurídico y generando reporte de auditoría...',
+    ];
+
+    let currentStepIdx = 0;
+    auditIntervalRef.current = setInterval(() => {
+      currentStepIdx = (currentStepIdx + 1) % steps.length;
+      setActiveAuditTask((prev) => (prev ? { ...prev, step: steps[currentStepIdx] } : null));
+    }, 3800);
+
+    try {
+      const newAudit = await executeContractAuditApi(fileToUpload, uploadFileName, currentUser.email);
+      if (auditIntervalRef.current) {
+        clearInterval(auditIntervalRef.current);
+        auditIntervalRef.current = null;
+      }
+
+      // 1. Guardar auditoría completada
+      await handleAuditCompleted(newAudit);
+
+      // 2. Reproducir tono sonoro sutil
+      playNotificationSound();
+
+      // 3. Registrar en Centro de Notificaciones
+      const newNotif: AppNotification = {
+        id: `notif-${Date.now()}`,
+        type: 'audit_completed',
+        title: `¡Auditoría Finalizada!`,
+        message: `Análisis normativo concluido para "${newAudit.contractTitle}". Score de riesgo: ${newAudit.overallRiskScore}/100.`,
+        timestamp: new Date().toISOString(),
+        read: false,
+        contractId: newAudit.id,
+        auditId: newAudit.id,
+        urgency: newAudit.overallRiskScore > 60 ? 'urgent' : 'success',
+        contractTitle: newAudit.contractTitle,
+      };
+      setNotifications((prev) => [newNotif, ...prev]);
+
+      // 4. Mostrar aviso interactivo flotante con botón directo para ver dictamen
+      setCompletionNotification(newAudit);
+
+      // 5. Resetear tarea en segundo plano
+      setActiveAuditTask(null);
+    } catch (err: any) {
+      if (auditIntervalRef.current) {
+        clearInterval(auditIntervalRef.current);
+        auditIntervalRef.current = null;
+      }
+      setActiveAuditTask(null);
+      showToast(`Error durante la auditoría: ${err.message}`, 'info');
+    }
+  };
+
+  const handleMarkNotificationAsRead = (id: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+    );
+  };
+
+  const handleClearNotifications = () => {
+    setNotifications([]);
+    showToast('Centro de notificaciones limpio.');
   };
 
   // Completed new audit handler
@@ -466,6 +588,8 @@ export default function App() {
         user={currentUser}
         onLogout={handleLogout}
         deadlines={deadlines}
+        audits={audits}
+        notifications={notifications}
         theme={themeSetting}
         effectiveTheme={effectiveTheme}
         onToggleTheme={handleSetTheme}
@@ -479,11 +603,87 @@ export default function App() {
           }
           setCurrentTab('alerts');
         }}
+        onSelectAuditById={(contractId) => {
+          const found = audits.find((a) => a.id === contractId);
+          if (found) {
+            handleSelectAudit(found);
+          }
+        }}
+        onMarkNotificationAsRead={handleMarkNotificationAsRead}
+        onClearNotifications={handleClearNotifications}
         onUserUpdated={(updated) => {
           setCurrentUser(updated);
           showToast('Perfil actualizado correctamente', 'success');
         }}
       />
+
+      {/* Interactive Completion Banner / Toast */}
+      {completionNotification && (
+        <aside
+          aria-label="Aviso de auditoría completada"
+          className="fixed top-20 right-6 z-50 max-w-sm sm:max-w-md w-full bg-white/95 dark:bg-[#1c1c1e]/95 text-[#1d1d1f] dark:text-[#f5f5f7] p-4 rounded-2xl shadow-2xl backdrop-blur-2xl border border-emerald-500/40 flex items-start gap-3 animate-in slide-in-from-top-4 duration-300"
+        >
+          <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-[#34c759] shrink-0">
+            <Sparkles className="w-5 h-5 text-[#34c759]" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-1">
+              <h5 className="text-xs font-bold text-[#1d1d1f] dark:text-[#f5f5f7]">
+                ¡Auditoría Finalizada!
+              </h5>
+              <button
+                type="button"
+                onClick={() => setCompletionNotification(null)}
+                className="text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white p-0.5 rounded cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <p className="text-xs text-[#86868b] dark:text-[#a1a1a6] mt-0.5 line-clamp-2">
+              Se completó el análisis de &ldquo;{completionNotification.contractTitle}&rdquo;. Score de riesgo: {completionNotification.overallRiskScore}/100.
+            </p>
+            <div className="mt-2.5 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedAudit(completionNotification);
+                  setCurrentTab('detail');
+                  setCompletionNotification(null);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-[#0071e3] hover:bg-[#0077ed] transition-all shadow-xs cursor-pointer flex items-center gap-1.5"
+              >
+                <span>Ver Dictamen Ahora</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setCompletionNotification(null)}
+                className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white transition-colors cursor-pointer"
+              >
+                Descartar
+              </button>
+            </div>
+          </div>
+        </aside>
+      )}
+
+      {/* Floating Background Audit Widget cuando está minimizado */}
+      {activeAuditTask && activeAuditTask.status === 'auditing' && activeAuditTask.isMinimized && (
+        <BackgroundAuditWidget
+          task={activeAuditTask}
+          onMaximize={() =>
+            setActiveAuditTask((prev) => (prev ? { ...prev, isMinimized: false } : null))
+          }
+          onCancel={() => {
+            if (auditIntervalRef.current) {
+              clearInterval(auditIntervalRef.current);
+              auditIntervalRef.current = null;
+            }
+            setActiveAuditTask(null);
+          }}
+        />
+      )}
 
       {/* Main Body */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
@@ -503,6 +703,14 @@ export default function App() {
           <AuditUploader
             onAuditCompleted={handleAuditCompleted}
             currentUserEmail={currentUser.email}
+            onStartBackgroundAudit={handleStartBackgroundAudit}
+            activeTask={activeAuditTask}
+            onMinimizeAudit={() =>
+              setActiveAuditTask((prev) => (prev ? { ...prev, isMinimized: true } : null))
+            }
+            onReopenAuditModal={() =>
+              setActiveAuditTask((prev) => (prev ? { ...prev, isMinimized: false } : null))
+            }
           />
         )}
 
