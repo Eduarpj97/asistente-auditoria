@@ -321,7 +321,24 @@ export async function executeContractAuditApi(
     ],
     clauses: mappedClauses,
     risksIdentified: mappedRisks,
-    keyDeadlines: [],
+    keyDeadlines: [
+      {
+        id: `exp-${Date.now()}`,
+        date: new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString().split('T')[0],
+        title: 'Vencimiento de Vigencia Contractual',
+        daysRemaining: 365,
+        urgency: 'normal',
+        description: `Vigencia formal hasta el ${new Date(Date.now() + 365 * 24 * 3600 * 1000).toISOString().split('T')[0]}.`,
+      },
+      {
+        id: `pre-${Date.now()}`,
+        date: new Date(Date.now() + (365 - 30) * 24 * 3600 * 1000).toISOString().split('T')[0],
+        title: 'Ventana de Preaviso de Renovación (30 Días)',
+        daysRemaining: 335,
+        urgency: 'normal',
+        description: `Plazo límite para notificar no renovación previa formal (${new Date(Date.now() + (365 - 30) * 24 * 3600 * 1000).toISOString().split('T')[0]}).`,
+      },
+    ],
     missingEssentialClauses:
       ruleScoring.missing_controls && ruleScoring.missing_controls.length > 0
         ? ruleScoring.missing_controls

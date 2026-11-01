@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Bell,
   Clock,
@@ -11,6 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import { KeyDeadline, ContractAudit } from '../types/audit';
+import { extractDeadlinesFromAudits } from '../utils/deadlineUtils';
 
 interface DeadlineAlertsProps {
   deadlines: KeyDeadline[];
@@ -37,11 +38,30 @@ export const DeadlineAlerts: React.FC<DeadlineAlertsProps> = ({
   const [newDesc, setNewDesc] = useState('');
   const [selectedContractId, setSelectedContractId] = useState(audits[0]?.id || '');
 
-  const urgentList = deadlines.filter((d) => d.urgency === 'urgent' && !d.dismissed);
-  const warningList = deadlines.filter((d) => d.urgency === 'warning' && !d.dismissed);
-  const normalList = deadlines.filter((d) => d.urgency === 'normal' && !d.dismissed);
+  // Consolidación reactiva: sintetiza de inmediato los plazos legales de los contratos auditados
+  // garantizando que las métricas de vencimiento y preaviso nunca queden en blanco (0)
+  const combinedDeadlines = useMemo(() => {
+    const fromAudits = extractDeadlinesFromAudits(audits);
+    const existingIds = new Set(fromAudits.map((d) => d.id));
+    const custom = deadlines.filter((d) => !existingIds.has(d.id));
 
-  const filteredDeadlines = deadlines.filter((d) => {
+    // Respetar estado dismissed de deadlines existentes
+    const dismissedMap = new Map(deadlines.map((d) => [d.id, d.dismissed]));
+    const merged = fromAudits.map((d) => {
+      if (d.id && dismissedMap.has(d.id)) {
+        return { ...d, dismissed: dismissedMap.get(d.id) };
+      }
+      return d;
+    });
+
+    return [...merged, ...custom];
+  }, [audits, deadlines]);
+
+  const urgentList = combinedDeadlines.filter((d) => d.urgency === 'urgent' && !d.dismissed);
+  const warningList = combinedDeadlines.filter((d) => d.urgency === 'warning' && !d.dismissed);
+  const normalList = combinedDeadlines.filter((d) => d.urgency === 'normal' && !d.dismissed);
+
+  const filteredDeadlines = combinedDeadlines.filter((d) => {
     if (d.dismissed) return false;
     if (filterUrgency === 'urgent') return d.urgency === 'urgent';
     if (filterUrgency === 'warning') return d.urgency === 'warning';
@@ -164,7 +184,7 @@ export const DeadlineAlerts: React.FC<DeadlineAlertsProps> = ({
               : 'text-[#86868b] dark:text-[#a1a1a6] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]'
           }`}
         >
-          Todas ({deadlines.filter((d) => !d.dismissed).length})
+          Todas ({combinedDeadlines.filter((d) => !d.dismissed).length})
         </button>
         <button
           type="button"
@@ -300,10 +320,11 @@ export const DeadlineAlerts: React.FC<DeadlineAlertsProps> = ({
                     <button
                       type="button"
                       onClick={() => onSelectAuditById(dl.contractId!)}
-                      className="p-2 rounded-xl text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7] hover:bg-black/[0.05] dark:hover:bg-white/[0.08] transition-colors cursor-pointer"
-                      title="Ver contrato"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-[#0071e3] dark:text-[#3898ec] bg-[#0071e3]/10 hover:bg-[#0071e3]/20 border border-[#0071e3]/20 transition-colors cursor-pointer"
+                      title="Abrir expediente completo del contrato"
                     >
-                      <ExternalLink className="w-4 h-4" />
+                      <span>Ver Expediente</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>

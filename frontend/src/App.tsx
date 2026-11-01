@@ -11,6 +11,7 @@ import { ContractAudit, User, KeyDeadline, BackgroundAuditTask, AppNotification 
 import { exportToPDF, exportToWord } from './utils/reportExporter';
 import { executeContractAuditApi } from './utils/auditProcessor';
 import { playNotificationSound } from './utils/soundNotification';
+import { extractDeadlinesFromAudits } from './utils/deadlineUtils';
 import { BackgroundAuditWidget } from './components/BackgroundAuditWidget';
 import { CheckCircle2, AlertCircle, Sparkles, ArrowRight, X } from 'lucide-react';
 
@@ -114,17 +115,35 @@ export default function App() {
   // Selected audit for detail inspection
   const [selectedAudit, setSelectedAudit] = useState<ContractAudit | null>(null);
 
-  // Key deadlines pool (aislado estrictamente por usuario)
+  // Key deadlines pool (aislado estrictamente por usuario y poblado automáticamente)
   const [deadlines, setDeadlines] = useState<KeyDeadline[]>(() => {
     try {
       const savedUser = localStorage.getItem('audiflow_user') || sessionStorage.getItem('audiflow_user');
       if (!savedUser) return [];
       const user: User = JSON.parse(savedUser);
       if (!user?.email) return [];
+
+      const savedAuditsRaw = localStorage.getItem(`audiflow_audits_${user.email.toLowerCase()}`);
+      let baseDeadlines: KeyDeadline[] = [];
+      if (savedAuditsRaw) {
+        try {
+          const parsedAudits: ContractAudit[] = JSON.parse(savedAuditsRaw);
+          if (Array.isArray(parsedAudits)) {
+            baseDeadlines = extractDeadlinesFromAudits(
+              parsedAudits.filter((a) => !a.id.startsWith('aud-2026-00'))
+            );
+          }
+        } catch {}
+      }
+
       const saved = localStorage.getItem(`audiflow_deadlines_${user.email.toLowerCase()}`);
-      if (!saved) return [];
+      if (!saved) return baseDeadlines;
       const parsed: KeyDeadline[] = JSON.parse(saved);
-      return Array.isArray(parsed) ? parsed.filter((d) => !d.contractId?.startsWith('aud-2026-00')) : [];
+      if (!Array.isArray(parsed)) return baseDeadlines;
+
+      const custom = parsed.filter((d) => !d.contractId || d.id?.startsWith('custom-dl-'));
+      const existingIds = new Set(baseDeadlines.map((b) => b.id));
+      return [...baseDeadlines, ...custom.filter((c) => !existingIds.has(c.id))];
     } catch {
       return [];
     }
@@ -234,23 +253,14 @@ export default function App() {
             return serverAudits;
           });
 
-          // Sincronizar fechas límites asociadas exclusivamente a los contratos de este usuario
-          const contractDeadlines: KeyDeadline[] = [];
-          serverAudits.forEach((audit) => {
-            if (audit.keyDeadlines) {
-              audit.keyDeadlines.forEach((dl) => {
-                contractDeadlines.push({
-                  ...dl,
-                  contractId: audit.id,
-                  contractTitle: audit.contractTitle,
-                });
-              });
-            }
-          });
+          // Sincronizar fechas límites asociadas a los contratos de este usuario
+          const contractDeadlines = extractDeadlinesFromAudits(serverAudits);
 
           setDeadlines((prev) => {
-            const customDeadlines = prev.filter((d) => !d.contractId);
-            return [...contractDeadlines, ...customDeadlines];
+            const customDeadlines = prev.filter((d) => !d.contractId || d.id?.startsWith('custom-dl-'));
+            const existingIds = new Set(contractDeadlines.map((c) => c.id));
+            const uniqueCustom = customDeadlines.filter((c) => !existingIds.has(c.id));
+            return [...contractDeadlines, ...uniqueCustom];
           });
 
           // Si la auditoría seleccionada ya no existe en el servidor para este usuario, resetear selección
@@ -447,15 +457,12 @@ export default function App() {
     // Actualización optimista inmediata
     setAudits((prev) => [newAudit, ...prev]);
 
-    // Merge new deadlines into pool
-    if (newAudit.keyDeadlines && newAudit.keyDeadlines.length > 0) {
-      const newDls = newAudit.keyDeadlines.map((dl) => ({
-        ...dl,
-        contractId: newAudit.id,
-        contractTitle: newAudit.contractTitle,
-      }));
-      setDeadlines((prev) => [...newDls, ...prev]);
-    }
+    // Merge new deadlines into pool de forma inmediata
+    const newExtractedDeadlines = extractDeadlinesFromAudits([newAudit]);
+    setDeadlines((prev) => {
+      const existingIds = new Set(newExtractedDeadlines.map((d) => d.id));
+      return [...newExtractedDeadlines, ...prev.filter((d) => !existingIds.has(d.id))];
+    });
 
     setSelectedAudit(newAudit);
     setCurrentTab('detail');
