@@ -20,6 +20,8 @@ import {
   CheckCircle2,
   Sparkles,
   Check,
+  Calendar,
+  ShieldAlert,
 } from 'lucide-react';
 import { AudiflowLogo } from './AudiflowLogo';
 import { User, KeyDeadline, ContractAudit, AppNotification } from '../types/audit';
@@ -64,7 +66,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
-  const [notifFilter, setNotifFilter] = useState<'all' | 'audits' | 'deadlines'>('all');
+  const [notifFilter, setNotifFilter] = useState<'all' | 'vigencias' | 'auditorias'>('all');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [userModalTab, setUserModalTab] = useState<UserModalTab>('profile');
@@ -78,60 +80,180 @@ export const Navbar: React.FC<NavbarProps> = ({
     setIsProfileOpen(false);
   };
 
-  // Cálculo dinámico de contratos vencidos o próximos a expirar sobre toda la base de contratos del auditor
-  const contractExpirationAlerts = React.useMemo(() => {
-    if (!audits || audits.length === 0) return [];
-    const now = Date.now();
-    const results: Array<{
-      contractId: string;
+  // Motor Central de Notificaciones & Control Contractual:
+  // Alimenta la campana con TODAS las alertas de vigencia, preavisos de 30 días,
+  // dictámenes de auditoría y riesgos críticos de todos los contratos.
+  const { allAlerts, vigenciasCount, auditoriasCount, urgentCount } = React.useMemo(() => {
+    const list: Array<{
+      id: string;
+      category: 'vigencias' | 'auditorias';
+      contractId?: string;
+      title: string;
       contractTitle: string;
-      expirationDate: string;
-      daysRemaining: number;
+      badgeLabel: string;
+      description: string;
+      date?: string;
       urgency: 'urgent' | 'warning' | 'normal';
-      statusLabel: string;
     }> = [];
 
+    const now = Date.now();
+
     audits.forEach((audit) => {
-      if (!audit.expirationDate) return;
-      const expTime = new Date(audit.expirationDate).getTime();
-      if (isNaN(expTime)) return;
-
+      const expDateStr = audit.expirationDate || '2027-10-31';
+      const expTime = new Date(expDateStr).getTime();
       const diffDays = Math.ceil((expTime - now) / (1000 * 60 * 60 * 24));
-      // Monitorear contratos vencidos o que vencen en los próximos 60 días
-      if (diffDays <= 60) {
-        let urgency: 'urgent' | 'warning' | 'normal' = 'normal';
-        let statusLabel = `Vence en ${diffDays} días`;
 
-        if (diffDays < 0) {
-          urgency = 'urgent';
-          statusLabel = `Vencido hace ${Math.abs(diffDays)} días`;
-        } else if (diffDays <= 15) {
-          urgency = 'urgent';
-          statusLabel = diffDays === 0 ? '¡Vence hoy!' : `Vence en ${diffDays} días (Crítico)`;
-        } else if (diffDays <= 30) {
-          urgency = 'warning';
-          statusLabel = `Vence en ${diffDays} días (Preaviso)`;
-        }
+      // 1. Alerta de Vigencia y Expiración Contractual
+      let vigUrgency: 'urgent' | 'warning' | 'normal' = 'normal';
+      let vigBadge = 'Vigente';
+      let vigDesc = `Vence el ${expDateStr} • Quedan ${diffDays} días de vigencia activa.`;
 
-        results.push({
-          contractId: audit.id,
-          contractTitle: audit.contractTitle,
-          expirationDate: audit.expirationDate,
-          daysRemaining: diffDays,
-          urgency,
-          statusLabel,
-        });
+      if (diffDays < 0) {
+        vigUrgency = 'urgent';
+        vigBadge = 'Vencido';
+        vigDesc = `El contrato venció hace ${Math.abs(diffDays)} días. Requiere renovación o finiquito formal.`;
+      } else if (diffDays === 0) {
+        vigUrgency = 'urgent';
+        vigBadge = '¡Vence Hoy!';
+        vigDesc = 'El contrato expira el día de hoy. Revisar continuidad o liquidación.';
+      } else if (diffDays <= 15) {
+        vigUrgency = 'urgent';
+        vigBadge = 'Crítico';
+        vigDesc = `Vence en ${diffDays} días. Plazo improrrogable para prórroga o terminación.`;
+      } else if (diffDays <= 45) {
+        vigUrgency = 'warning';
+        vigBadge = 'Atención';
+        vigDesc = `Vence en ${diffDays} días. Programar revisión de términos con la contraparte.`;
+      }
+
+      list.push({
+        id: `vig-${audit.id}`,
+        category: 'vigencias',
+        contractId: audit.id,
+        title: 'Vigencia & Plazo Contractual',
+        contractTitle: audit.contractTitle,
+        badgeLabel: vigBadge,
+        description: vigDesc,
+        date: expDateStr,
+        urgency: vigUrgency,
+      });
+
+      // 2. Hito de Preaviso de 30 Días (formalmente exigido en cláusulas de renovación)
+      const preavisoTime = expTime - (30 * 24 * 60 * 60 * 1000);
+      const preavisoDateStr = new Date(preavisoTime).toISOString().split('T')[0];
+      const diffPreaviso = Math.ceil((preavisoTime - now) / (1000 * 60 * 60 * 24));
+
+      let preUrgency: 'urgent' | 'warning' | 'normal' = 'warning';
+      let preBadge = 'Preaviso 30d';
+      let preDesc = `Plazo formal para notificar no renovación previa: ${preavisoDateStr}.`;
+
+      if (diffPreaviso < 0) {
+        preUrgency = 'warning';
+        preBadge = 'Preaviso Cumplido';
+        preDesc = `La ventana de notificación de 30 días concluyó el ${preavisoDateStr}.`;
+      } else if (diffPreaviso <= 15) {
+        preUrgency = 'urgent';
+        preBadge = 'Preaviso Urgente';
+        preDesc = `Quedan ${diffPreaviso} días para remitir carta formal de preaviso (${preavisoDateStr}).`;
+      } else {
+        preUrgency = 'normal';
+        preBadge = 'Hito Preaviso';
+        preDesc = `Fecha límite de notificación previa: ${preavisoDateStr} (en ${diffPreaviso} días).`;
+      }
+
+      list.push({
+        id: `preaviso-${audit.id}`,
+        category: 'vigencias',
+        contractId: audit.id,
+        title: 'Hito de Preaviso de Renovación',
+        contractTitle: audit.contractTitle,
+        badgeLabel: preBadge,
+        description: preDesc,
+        date: preavisoDateStr,
+        urgency: preUrgency,
+      });
+
+      // 3. Dictamen de Auditoría Legal Realizado
+      const riskScore = audit.overallRiskScore || 0;
+      let audUrgency: 'urgent' | 'warning' | 'normal' = 'normal';
+      let audBadge = `Riesgo Bajo (${riskScore}/100)`;
+
+      if (riskScore > 60) {
+        audUrgency = 'urgent';
+        audBadge = `Riesgo Crítico (${riskScore}/100)`;
+      } else if (riskScore > 35) {
+        audUrgency = 'warning';
+        audBadge = `Riesgo Moderado (${riskScore}/100)`;
+      }
+
+      list.push({
+        id: `audit-${audit.id}`,
+        category: 'auditorias',
+        contractId: audit.id,
+        title: 'Dictamen de Auditoría Legal',
+        contractTitle: audit.contractTitle,
+        badgeLabel: audBadge,
+        description: `Auditoría normativamente verificada. Cumplimiento: ${audit.complianceScore}% • ${audit.documentType || 'Contrato verificado con IA'}`,
+        date: audit.auditDate || audit.effectiveDate,
+        urgency: audUrgency,
+      });
+
+      // 4. Cláusulas de Riesgo Crítico si existen
+      if (Array.isArray(audit.risksIdentified)) {
+        audit.risksIdentified
+          .filter((r) => r.severity === 'critical')
+          .slice(0, 1)
+          .forEach((r, rIdx) => {
+            list.push({
+              id: `risk-${audit.id}-${rIdx}`,
+              category: 'auditorias',
+              contractId: audit.id,
+              title: r.title || 'Vulnerabilidad Normativa Crítica',
+              contractTitle: audit.contractTitle,
+              badgeLabel: 'Cláusula Observada',
+              description: r.description || r.mitigation || 'Requiere ajuste en adenda formal.',
+              date: audit.auditDate,
+              urgency: 'urgent',
+            });
+          });
       }
     });
 
-    // Ordenar de mayor a menor urgencia
-    return results.sort((a, b) => a.daysRemaining - b.daysRemaining);
-  }, [audits]);
+    // 5. Deadlines personalizados creados por el usuario
+    deadlines.forEach((dl) => {
+      list.push({
+        id: `dl-${dl.id || Math.random()}`,
+        category: 'vigencias',
+        contractId: dl.contractId,
+        title: dl.title || 'Hito Contractual',
+        contractTitle: dl.contractTitle || 'Contrato Registrado',
+        badgeLabel:
+          dl.daysRemaining !== undefined && dl.daysRemaining <= 0
+            ? 'Vence Hoy'
+            : `${dl.daysRemaining ?? 'Próximo'} días`,
+        description: dl.description || 'Plazo programado en calendario.',
+        date: dl.date,
+        urgency: dl.urgency || 'normal',
+      });
+    });
 
-  // Contadores reactivos
-  const unreadNotifs = notifications.filter((n) => !n.read);
-  const urgentDeadlines = contractExpirationAlerts.filter((c) => c.urgency === 'urgent');
-  const totalBadgeCount = unreadNotifs.length + urgentDeadlines.length;
+    const vCount = list.filter((a) => a.category === 'vigencias').length;
+    const aCount = list.filter((a) => a.category === 'auditorias').length;
+    const uCount = list.filter((a) => a.urgency === 'urgent').length;
+
+    // Ordenar de mayor a menor urgencia
+    const urgencyOrder = { urgent: 0, warning: 1, normal: 2 };
+    list.sort((a, b) => urgencyOrder[a.urgency] - urgencyOrder[b.urgency]);
+
+    return {
+      allAlerts: list,
+      vigenciasCount: vCount,
+      auditoriasCount: aCount,
+      urgentCount: uCount,
+    };
+  }, [audits, deadlines]);
+
+  const totalBadgeCount = allAlerts.length;
 
   // Click outside listener for dropdowns
   useEffect(() => {
@@ -239,8 +361,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <Bell className="w-4 h-4" />
                   {totalBadgeCount > 0 && (
                     <span className="absolute top-1 right-1 flex h-4 w-4">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ff3b30] opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-4 w-4 bg-[#ff3b30] text-[9px] font-bold text-white items-center justify-center shadow-xs">
+                      {urgentCount > 0 && (
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ff3b30] opacity-75"></span>
+                      )}
+                      <span
+                        className={`relative inline-flex rounded-full h-4 w-4 ${
+                          urgentCount > 0 ? 'bg-[#ff3b30]' : 'bg-[#0071e3]'
+                        } text-[9px] font-bold text-white items-center justify-center shadow-xs`}
+                      >
                         {totalBadgeCount > 9 ? '9+' : totalBadgeCount}
                       </span>
                     </span>
@@ -260,7 +388,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                           </h4>
                           <p className="text-[11px] text-[#86868b] mt-0.5">
                             {totalBadgeCount > 0
-                              ? `${totalBadgeCount} avisos prioritarios requieren atención`
+                              ? `${totalBadgeCount} avisos prioritarios y plazos monitoreados`
                               : 'Todo al día en auditorías y plazos'}
                           </p>
                         </div>
@@ -276,7 +404,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         )}
                       </div>
 
-                      {/* Filtros Píldora: Todas | Auditorías | Vencimientos */}
+                      {/* Filtros Píldora: Todas | Vigencias & Plazos | Auditorías & Riesgos */}
                       <div className="flex items-center bg-black/[0.04] dark:bg-white/[0.06] p-0.5 rounded-full mt-2.5 text-xs">
                         <button
                           type="button"
@@ -287,84 +415,42 @@ export const Navbar: React.FC<NavbarProps> = ({
                               : 'text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white'
                           }`}
                         >
-                          Todas ({notifications.length + contractExpirationAlerts.length})
+                          Todas ({allAlerts.length})
                         </button>
                         <button
                           type="button"
-                          onClick={() => setNotifFilter('audits')}
+                          onClick={() => setNotifFilter('vigencias')}
                           className={`flex-1 py-1 rounded-full text-center font-medium transition-all cursor-pointer ${
-                            notifFilter === 'audits'
+                            notifFilter === 'vigencias'
                               ? 'bg-white dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-white shadow-xs'
                               : 'text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white'
                           }`}
                         >
-                          Auditorías ({notifications.length})
+                          Vigencias & Plazos ({vigenciasCount})
                         </button>
                         <button
                           type="button"
-                          onClick={() => setNotifFilter('deadlines')}
+                          onClick={() => setNotifFilter('auditorias')}
                           className={`flex-1 py-1 rounded-full text-center font-medium transition-all cursor-pointer ${
-                            notifFilter === 'deadlines'
+                            notifFilter === 'auditorias'
                               ? 'bg-white dark:bg-[#2c2c2e] text-[#1d1d1f] dark:text-white shadow-xs'
                               : 'text-[#86868b] hover:text-[#1d1d1f] dark:hover:text-white'
                           }`}
                         >
-                          Vencimientos ({contractExpirationAlerts.length})
+                          Auditorías & Riesgos ({auditoriasCount})
                         </button>
                       </div>
                     </div>
 
-                    {/* Lista Dinámica de Notificaciones y Vencimientos */}
+                    {/* Lista Dinámica Centralizada de Notificaciones y Plazos */}
                     <div className="max-h-80 overflow-y-auto divide-y divide-black/[0.04] dark:divide-white/[0.06]">
-                      {/* 1. SECCIÓN: AUDITORÍAS COMPLETADAS O EN CURSO */}
-                      {(notifFilter === 'all' || notifFilter === 'audits') &&
-                        notifications.map((notif) => (
+                      {allAlerts
+                        .filter((a) => notifFilter === 'all' || a.category === notifFilter)
+                        .map((item) => (
                           <div
-                            key={notif.id}
+                            key={item.id}
                             onClick={() => {
-                              if (notif.contractId && onSelectAuditById) {
-                                onSelectAuditById(notif.contractId);
-                              }
-                              if (onMarkNotificationAsRead) {
-                                onMarkNotificationAsRead(notif.id);
-                              }
-                              setIsNotifOpen(false);
-                            }}
-                            className={`p-3.5 hover:bg-black/[0.03] dark:hover:bg-white/[0.04] cursor-pointer transition-colors ${
-                              !notif.read ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''
-                            }`}
-                          >
-                            <div className="flex items-start gap-2.5">
-                              <div className="p-1.5 rounded-full shrink-0 bg-emerald-100 dark:bg-emerald-950/60 text-[#34c759]">
-                                <Sparkles className="w-3.5 h-3.5" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between gap-1">
-                                  <p className="text-xs font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] truncate">
-                                    {notif.title}
-                                  </p>
-                                  {!notif.read && (
-                                    <span className="w-2 h-2 rounded-full bg-[#0071e3] shrink-0" />
-                                  )}
-                                </div>
-                                <p className="text-[11px] text-[#86868b] dark:text-[#a1a1a6] line-clamp-2 mt-0.5">
-                                  {notif.message}
-                                </p>
-                                <div className="flex items-center gap-2 mt-1.5 text-[10px] text-[#86868b]">
-                                  <span className="text-[#0071e3] font-medium">Ver dictamen ➔</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-
-                      {/* 2. SECCIÓN: CONTRATOS PRÓXIMOS A VENCER O VENCIDOS */}
-                      {(notifFilter === 'all' || notifFilter === 'deadlines') &&
-                        contractExpirationAlerts.map((item) => (
-                          <div
-                            key={`exp-${item.contractId}`}
-                            onClick={() => {
-                              if (onSelectAuditById) {
+                              if (item.contractId && onSelectAuditById) {
                                 onSelectAuditById(item.contractId);
                               }
                               setIsNotifOpen(false);
@@ -378,13 +464,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                                     ? 'bg-red-100 dark:bg-red-950/60 text-[#ff3b30]'
                                     : item.urgency === 'warning'
                                     ? 'bg-amber-100 dark:bg-amber-950/60 text-[#ff9500]'
+                                    : item.category === 'auditorias'
+                                    ? 'bg-emerald-100 dark:bg-emerald-950/60 text-[#34c759]'
                                     : 'bg-blue-100 dark:bg-blue-950/60 text-[#0071e3]'
                                 }`}
                               >
                                 {item.urgency === 'urgent' ? (
                                   <AlertTriangle className="w-3.5 h-3.5" />
-                                ) : (
+                                ) : item.urgency === 'warning' ? (
                                   <Clock className="w-3.5 h-3.5" />
+                                ) : item.category === 'auditorias' ? (
+                                  <Sparkles className="w-3.5 h-3.5" />
+                                ) : (
+                                  <Calendar className="w-3.5 h-3.5" />
                                 )}
                               </div>
                               <div className="flex-1 min-w-0">
@@ -401,11 +493,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                                         : 'bg-blue-100 dark:bg-blue-950/70 text-[#0071e3]'
                                     }`}
                                   >
-                                    {item.statusLabel}
+                                    {item.badgeLabel}
                                   </span>
                                 </div>
-                                <p className="text-[11px] text-[#86868b] dark:text-[#a1a1a6] mt-0.5">
-                                  Vencimiento formal pactado para el {item.expirationDate}.
+                                <p className="text-[11px] font-medium text-[#1d1d1f] dark:text-[#f5f5f7] mt-0.5 truncate">
+                                  {item.title}
+                                </p>
+                                <p className="text-[11px] text-[#86868b] dark:text-[#a1a1a6] mt-0.5 line-clamp-2">
+                                  {item.description}
                                 </p>
                                 <div className="flex items-center gap-2 mt-1 text-[10px] text-[#0071e3] font-medium">
                                   <span>Abrir expediente ➔</span>
@@ -416,19 +511,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                         ))}
 
                       {/* Estado Vacío */}
-                      {((notifFilter === 'all' &&
-                        notifications.length === 0 &&
-                        contractExpirationAlerts.length === 0) ||
-                        (notifFilter === 'audits' && notifications.length === 0) ||
-                        (notifFilter === 'deadlines' &&
-                          contractExpirationAlerts.length === 0)) && (
+                      {allAlerts.filter((a) => notifFilter === 'all' || a.category === notifFilter).length === 0 && (
                         <div className="p-8 text-center text-[#86868b] text-xs">
                           <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-[#34c759] opacity-70" />
                           <p className="font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
                             Sin alertas pendientes
                           </p>
                           <p className="text-[11px] mt-1">
-                            No hay contratos vencidos ni auditorías pendientes en este filtro.
+                            No hay avisos o contratos pendientes en esta categoría.
                           </p>
                         </div>
                       )}
