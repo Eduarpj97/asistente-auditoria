@@ -1,9 +1,12 @@
 services:
   web:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: eduarpj/asistente-auditoria:latest
     container_name: asistente-auditoria
     ports:
       - "8080:80"
-    volumes:
-      - ./index.html:/usr/share/nginx/html/index.html
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
