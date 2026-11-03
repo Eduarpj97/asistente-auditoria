@@ -21,7 +21,7 @@ from database import (
     db_get_user_audits,
     db_delete_audit_sync
 )
-from services.ocr_service import extract_text_hybrid
+from services.ocr_service import extract_text_hybrid, check_ocr_capabilities, ScannedDocumentOCRError
 from services.chunk_service import create_chunks
 from services.risk_scoring_service import risk_engine
 from services.llm_audit_service import llm_service
@@ -80,8 +80,14 @@ async def health_check():
         "service": "Audiflow API",
         "version": "1.2.0",
         "ollama_engine": ollama_status,
-        "supabase_database": db_status
+        "supabase_database": db_status,
+        "ocr_engine": check_ocr_capabilities()
     }
+
+@app.get("/v1/ocr/status", summary="Diagnóstico de capacidades del motor OCR")
+async def ocr_status():
+    """Retorna el estado detallado de librerías Python, binarios del sistema y modelos OCR."""
+    return check_ocr_capabilities()
 
 @app.post("/v1/auth/register", response_model=AuthResponse, summary="Registrar usuario en base de datos centralizada")
 async def register_endpoint(req: RegisterRequest):
