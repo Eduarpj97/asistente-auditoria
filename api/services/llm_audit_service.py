@@ -15,6 +15,51 @@ VPS_HOST = os.getenv("OLLAMA_VPS_HOST", "132.145.198.1")
 VPS_USER = os.getenv("OLLAMA_VPS_USER", "ubuntu")
 NORMATIVAS_URL = os.getenv("NORMATIVAS_URL", "https://audiflow-audit.abbynex.site/normativas/normativa_auditoria_vigente_2026.md")
 
+
+# ─── ARNÉS ANTI-ALUCINACIÓN 2.0: TAXONOMÍA Y GROUNDING MULTIDIMENSIONAL ──────
+COMMON_LEGAL_STOPWORDS = {
+    "de", "la", "el", "los", "las", "un", "una", "unos", "unas", "y", "o", "u", "e",
+    "en", "a", "al", "del", "por", "para", "con", "sin", "sobre", "entre", "se", "su",
+    "sus", "que", "como", "mas", "más", "pero", "este", "esta", "estos", "estas", "cual", "cuales"
+}
+
+LEGAL_TAXONOMY_PATTERNS = {
+    "penalidad": [
+        r"\bpenalid\w*", r"\bmulta\w*", r"\bsanci[oó]n\w*", r"\bmora\b", r"\bcl[aá]usula penal\b", 
+        r"\bindemniz\w*", r"\binter[eé]s\w*", r"\bretenci[oó]n\w*", r"\bdescuento\w*", r"%", 
+        r"\bperjuicio\w*", r"\bincumplimiento\w*", r"\btarifa\b", r"\bpago\b", r"\busura\b"
+    ],
+    "sla": [
+        r"\bdisponib\w*", r"\bnivel de servicio\b", r"\bsla\b", r"\buptime\b", r"\btiempo de respuesta\b",
+        r"\bventana de mantenimiento\b", r"99\.", r"95\.", r"\bsoporte t[eé]cnico\b", r"\bincidencia\w*",
+        r"\bhorario\b", r"\bhora\w*", r"\bminuto\w*", r"\blatencia\b"
+    ],
+    "responsabilidad": [
+        r"\bresponsab\w*", r"\bindemn\w*", r"\bda[nñ]o\w*", r"\bperjuicio\w*", r"\bdolo\b", r"\bculpa\b", 
+        r"\bexoner\w*", r"\blimitaci[oó]n\b", r"\bexcluy\w*", r"\bdirecto\b", r"\bindirecto\b",
+        r"\blucro cesante\b", r"\bda[nñ]o emergente\b", r"\btercero\w*", r"\breclamo\w*"
+    ],
+    "terminacion": [
+        r"\btermina\w*", r"\brescisi[oó]n\b", r"\bresoluci[oó]n\b", r"\bunilateral\b", r"\bpreaviso\b", 
+        r"\bjusta causa\b", r"\bincumplimiento grave\b", r"\brevoca\w*", r"\bdesist\w*",
+        r"\bvencimiento\b", r"\bvigencia\b", r"\bpr[oó]rroga\b", r"\brenovaci[oó]n\b"
+    ],
+    "privacidad": [
+        r"\bconfidenc\w*", r"\bsecreto\b", r"\breserva\b", r"\bdatos personales\b", r"\bhabeas data\b", 
+        r"\brgpd\b", r"\bdivulga\w*", r"\bprivacidad\b", r"\bseguridad de la informaci[oó]n\b",
+        r"\bno divulgaci[oó]n\b", r"\bcifrado\b", r"\btercero\w*"
+    ],
+    "propiedad_intelectual": [
+        r"\bpropiedad intelectual\b", r"\bderechos de autor\b", r"\blicencia\w*", r"\bpatente\w*", 
+        r"\bmarca\w*", r"\btitularidad\b", r"\bceder\b", r"\bcesi[oó]n\b", r"\bsoftware\b", 
+        r"\bc[oó]digo fuente\b", r"\bobras\b", r"\bcreaci[oó]n\w*", r"\binvenci[oó]n\w*"
+    ],
+    "jurisdiccion": [
+        r"\bjurisdicci[oó]n\b", r"\bley aplicable\b", r"\barbitr\w*", r"\btribunal\w*", r"\bjueces\b", 
+        r"\bamigable componedor\b", r"\bcompetencia\b", r"\bdiligencia\b", r"\bdomicilio\b"
+    ]
+}
+
 class LLMAuditService:
     """
     Servicio de integración con el motor de IA local/VPS (Ollama / Llama 3.1).
@@ -285,11 +330,106 @@ class LLMAuditService:
             "clausulas_criticas": clausulas
         }
 
+    def calculate_textual_grounding(self, cita: str, norm_contract: str) -> Tuple[bool, int, str]:
+        """
+        Arnés 2.0 - Capa 1: Cobertura Proporcional y Fidelidad Textual.
+        No se conforma con 4 palabras arbitrarias: exige coincidencia literal exacta (100%)
+        o una cobertura de palabras léxicas continuas >= 65% en el contrato.
+        """
+        norm_cita = re.sub(r'\s+', ' ', cita.strip().lower())
+        if not norm_cita:
+            return False, 0, "Cita vacía."
+
+        # 1. Coincidencia literal directa completa
+        if norm_cita in norm_contract:
+            return True, 100, "Cita literal exacta confirmada en el contrato."
+
+        words = re.findall(r'\b\w+\b', norm_cita)
+        if not words:
+            return False, 0, "Sin palabras reconocibles."
+
+        lexical_words = [w for w in words if len(w) >= 3 and w not in COMMON_LEGAL_STOPWORDS]
+        if not lexical_words:
+            return False, 0, "La cita solo contiene conectores genéricos sin sustancia textual."
+
+        # Citas cortas (<= 5 palabras) deben coincidir literalmente
+        if len(words) <= 5:
+            if norm_cita in norm_contract:
+                return True, 100, "Cita corta confirmada."
+            return False, 0, "Cita corta no encontrada textualmente en el contrato."
+
+        # Para citas más extensas: verificar cobertura proporcional mediante ventanas continuas
+        covered_word_indices = set()
+        n = len(words)
+        window_sizes = [6, 5, 4, 3]
+
+        for ws in window_sizes:
+            for i in range(n - ws + 1):
+                sub = " ".join(words[i:i+ws])
+                if sub in norm_contract:
+                    if any(w in lexical_words for w in words[i:i+ws]):
+                        for idx in range(i, i + ws):
+                            covered_word_indices.add(idx)
+
+        lexical_indices = [i for i, w in enumerate(words) if w in lexical_words]
+        covered_lexical = [i for i in lexical_indices if i in covered_word_indices]
+
+        coverage_ratio = len(covered_lexical) / len(lexical_indices) if lexical_indices else 0.0
+        fidelidad_pct = int(round(coverage_ratio * 100))
+
+        # Regla estricta: Se requiere al menos un 65% de cobertura de palabras léxicas
+        if coverage_ratio >= 0.65:
+            return True, fidelidad_pct, f"Cita verificada con alta cobertura textual ({fidelidad_pct}% >= 65%)."
+        else:
+            return False, fidelidad_pct, f"Cita descartada por baja cobertura textual ({fidelidad_pct}% < 65%). Posible alucinación parcial."
+
+    def validate_legal_soundness(self, tipo: str, cita: str, explicacion: str) -> Tuple[bool, str, str]:
+        """
+        Arnés 2.0 - Capa 2: Validez y Coherencia Jurídica.
+        Verifica que el tipo de riesgo alegado tenga sustento léxico-jurídico real
+        en la cita del contrato, y que la explicación aporte fundamentación no tautológica.
+        """
+        tipo_str = str(tipo or "").strip().lower()
+
+        matched_category = None
+        if any(k in tipo_str for k in ["penal", "multa", "sanci", "mora"]):
+            matched_category = "penalidad"
+        elif any(k in tipo_str for k in ["sla", "servicio", "disponib", "uptime"]):
+            matched_category = "sla"
+        elif any(k in tipo_str for k in ["responsab", "indemn", "daño", "perjuicio"]):
+            matched_category = "responsabilidad"
+        elif any(k in tipo_str for k in ["termina", "resolu", "renova", "resci", "prorro"]):
+            matched_category = "terminacion"
+        elif any(k in tipo_str for k in ["priva", "confiden", "dato", "segurid"]):
+            matched_category = "privacidad"
+        elif any(k in tipo_str for k in ["intelectual", "autor", "licenc", "software", "patente", "marca"]):
+            matched_category = "propiedad_intelectual"
+        elif any(k in tipo_str for k in ["jurisdic", "ley", "arbitr", "tribunal"]):
+            matched_category = "jurisdiccion"
+
+        if not matched_category:
+            if len(explicacion.strip()) < 15:
+                return False, "INSUFICIENTE", "Fundamentación jurídica vacía o insuficiente."
+            return True, "PARCIAL", "Tipología genérica con fundamentación básica."
+
+        # El respaldo léxico de la figura jurídica DEBE estar en la CITA textual del contrato
+        patterns = LEGAL_TAXONOMY_PATTERNS.get(matched_category, [])
+        has_lexical_grounding = any(re.search(pat, cita.lower()) for pat in patterns)
+
+        if not has_lexical_grounding:
+            return False, "INCONGRUENTE", f"Incongruencia jurídica: Se catalogó como '{tipo}', pero la cita no contiene términos relativos a '{matched_category}'."
+
+        if len(explicacion.strip()) < 15 or explicacion.strip().lower() in ["es riesgosa", "riesgo alto", "no aplica"]:
+            return True, "PARCIAL", "Respaldo léxico presente pero justificación jurídica débil."
+
+        return True, "CONFIRMADA", f"Coherencia jurídica confirmada para categoría '{matched_category}'."
+
     def apply_anti_hallucination_harness(self, parsed: Dict[str, Any], raw_contract: str) -> Dict[str, Any]:
         """
-        Arnés de verificación cruzada en Python:
-        Valida que cada hallazgo de la IA esté físicamente respaldado por el texto del contrato.
-        Elimina alucinaciones, citas inventadas y falsos positivos.
+        Arnés Anti-Alucinación y Validación Jurídica 2.0:
+        1. Capa de Fidelidad Textual: Cobertura proporcional continua (mínimo 65% de palabras léxicas).
+        2. Capa de Coherencia Jurídica: Concordancia léxica entre la tipología declarada y el texto citado.
+        3. Capa de Calibración: Ponderación de severidad y descarte de conclusiones sin respaldo.
         """
         if not isinstance(parsed, dict):
             return parsed
@@ -301,7 +441,10 @@ class LLMAuditService:
             if not isinstance(c, dict):
                 continue
             cita = str(c.get("cita_textual", "")).strip()
-            # Si no hay cita o es un placeholder genérico
+            tipo = str(c.get("tipo", "Riesgo Contractual")).strip()
+            explicacion = str(c.get("explicacion_riesgo", "")).strip()
+
+            # Placeholder o cita vacía
             if len(cita) < 8 or cita.lower() in [
                 "cita textual analizada en el contrato.",
                 "n/a",
@@ -310,32 +453,29 @@ class LLMAuditService:
             ]:
                 continue
 
-            # Limpiar cita para búsqueda tolerante (sin signos de puntuación)
-            norm_cita = re.sub(r'\s+', ' ', cita.lower())
-            
-            # Verificar si la cita completa o un fragmento significativo de al menos 4 palabras existe en el contrato
-            palabras = [p for p in re.split(r'\W+', norm_cita) if len(p) > 2]
-            found = False
-            
-            if norm_cita in norm_contract:
-                found = True
-            elif len(palabras) >= 4:
-                # Comprobar si al menos una subsecuencia de 4 palabras consecutivas existe en el contrato
-                for i in range(len(palabras) - 3):
-                    chunk = " ".join(palabras[i:i+4])
-                    if chunk in norm_contract:
-                        found = True
-                        break
-            elif len(palabras) > 0:
-                # Si la cita es corta pero sus palabras clave están
-                matched_count = sum(1 for p in palabras if p in norm_contract)
-                if matched_count / len(palabras) >= 0.75:
-                    found = True
+            # 1. Capa de Fidelidad Textual (Grounding)
+            is_grounded, fidelity_pct, ground_msg = self.calculate_textual_grounding(cita, norm_contract)
+            if not is_grounded:
+                print(f"[ARNÉS ANTI-ALUCINACIÓN 2.0] Descartada cláusula por fallo textual: {tipo} ({fidelity_pct}%) - {ground_msg}")
+                continue
 
-            if found:
-                validated_clauses.append(c)
-            else:
-                print(f"[ARNÉS ANTI-ALUCINACIÓN] Descartada cláusula sin respaldo literal: {c.get('tipo', 'Desconocido')} - '{cita[:60]}...'")
+            # 2. Capa de Validez y Coherencia Jurídica
+            is_sound, sound_level, sound_msg = self.validate_legal_soundness(tipo, cita, explicacion)
+            if not is_sound:
+                print(f"[ARNÉS ANTI-ALUCINACIÓN 2.0] Descartada cláusula por fallo jurídico: {tipo} - {sound_msg}")
+                continue
+
+            # 3. Calibración y Enriquecimiento con Métricas Transparentes
+            c["fidelidad_textual_pct"] = fidelity_pct
+            c["coherencia_juridica"] = sound_level
+            c["estado_arnes"] = "VERIFICADO_LITERAL" if fidelity_pct == 100 else "VERIFICADO_ROBUSTO"
+            c["motivo_arnes"] = f"{ground_msg} {sound_msg}"
+
+            # Calibración de severidad: si la justificación jurídica es parcial, evitar alarmismo
+            if sound_level == "PARCIAL" and c.get("severidad") == "ALTO":
+                c["severidad"] = "MEDIO"
+
+            validated_clauses.append(c)
 
         parsed["clausulas_criticas"] = validated_clauses
 
