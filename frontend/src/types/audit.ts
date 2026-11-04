@@ -28,6 +28,13 @@ export interface AuditedClause {
   exactLocation?: string;
   legalReference?: string;
   suggestedDrafting?: string;
+  issuingBody?: string;
+  jurisdiction?: string;
+  officialSource?: string;
+  lastReviewed?: string;
+  normativeStatus?: string;
+  applicabilityCriteria?: string;
+  officialUrl?: string;
 }
 
 export interface RiskItem {
@@ -39,6 +46,32 @@ export interface RiskItem {
   legalReference?: string;
   quoteSnippet?: string;
   suggestedDrafting?: string;
+  issuingBody?: string;
+  jurisdiction?: string;
+  officialSource?: string;
+  lastReviewed?: string;
+  normativeStatus?: string;
+  applicabilityCriteria?: string;
+  officialUrl?: string;
+}
+
+export interface RegulatoryRuleDetail {
+  rule_id: string;
+  title: string;
+  category: string;
+  severity: string;
+  weight: number;
+  is_mandatory_clause: boolean;
+  normative_reference: string;
+  description: string;
+  remediation: string;
+  issuing_body?: string;
+  jurisdiction?: string;
+  official_source?: string;
+  last_reviewed?: string;
+  normative_status?: string;
+  applicability_criteria?: string;
+  official_url?: string;
 }
 
 export interface KeyDeadline {

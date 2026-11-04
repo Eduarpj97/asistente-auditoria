@@ -144,6 +144,13 @@ export async function executeContractAuditApi(
         rf.remediation ||
         'Alinear la redacción al marco normativo vigente para mitigar riesgos legales o regulatorios.',
       compliant: false,
+      issuingBody: rf.issuing_body || 'Organismo Regulador Competente',
+      jurisdiction: rf.jurisdiction || 'Jurisdicción Nacional Ordinaria',
+      officialSource: rf.official_source || rf.normative_reference,
+      lastReviewed: rf.last_reviewed || '2026-10-15',
+      normativeStatus: rf.normative_status || 'VIGENTE',
+      applicabilityCriteria: rf.applicability_criteria || 'Aplica como control de legalidad y buenas prácticas corporativas.',
+      officialUrl: rf.official_url,
     });
   });
 
@@ -189,6 +196,13 @@ export async function executeContractAuditApi(
         `Recomendación Legal: Incorporar cláusula de salvaguarda según ${
           rf.normative_reference || 'normativa aplicable'
         }.`,
+      issuingBody: rf.issuing_body || 'Organismo Regulador Competente',
+      jurisdiction: rf.jurisdiction || 'Jurisdicción Nacional Ordinaria',
+      officialSource: rf.official_source || rf.normative_reference,
+      lastReviewed: rf.last_reviewed || '2026-10-15',
+      normativeStatus: rf.normative_status || 'VIGENTE',
+      applicabilityCriteria: rf.applicability_criteria || 'Aplica como control de legalidad y buenas prácticas corporativas.',
+      officialUrl: rf.official_url,
     });
   });
 

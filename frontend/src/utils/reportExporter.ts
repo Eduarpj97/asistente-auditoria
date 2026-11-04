@@ -177,8 +177,28 @@ export async function exportToWord(audit: ContractAudit): Promise<void> {
               riskParagraphs.push(
                 new Paragraph({
                   children: [
-                    new TextRun({ text: '• Marco Normativo Aplicable: ', bold: true, color: '1A365D' }),
-                    new TextRun({ text: risk.legalReference, color: '2B6CB0' }),
+                    new TextRun({ text: '• Marco Normativo y Fuente Oficial: ', bold: true, color: '1A365D' }),
+                    new TextRun({ text: `${risk.legalReference}${risk.officialSource ? ` (${risk.officialSource})` : ''}`, color: '2B6CB0' }),
+                  ],
+                })
+              );
+            }
+            if (risk.jurisdiction) {
+              riskParagraphs.push(
+                new Paragraph({
+                  children: [
+                    new TextRun({ text: '• Jurisdicción y Ámbito Legal: ', bold: true, color: '2D3748' }),
+                    new TextRun({ text: `${risk.jurisdiction} [Vigencia: ${risk.lastReviewed || '2026'}]`, italics: true }),
+                  ],
+                })
+              );
+            }
+            if (risk.applicabilityCriteria) {
+              riskParagraphs.push(
+                new Paragraph({
+                  children: [
+                    new TextRun({ text: '• Criterio de Aplicabilidad al Contrato: ', bold: true, color: '276749' }),
+                    new TextRun({ text: risk.applicabilityCriteria }),
                   ],
                 })
               );
@@ -520,11 +540,12 @@ export function exportToPDF(audit: ContractAudit): void {
     const mitLines = doc.splitTextToSize(`Recomendación Legal & Preventiva: ${risk.mitigation}`, pageWidth - margin * 2 - 6);
     const locLines = risk.exactLocation ? doc.splitTextToSize(`Revisar con Lupa en Documento: ${risk.exactLocation}`, pageWidth - margin * 2 - 6) : [];
     const quoteLines = risk.quoteSnippet ? doc.splitTextToSize(`Texto Original: "${risk.quoteSnippet}"`, pageWidth - margin * 2 - 8) : [];
-    const legalLines = risk.legalReference ? doc.splitTextToSize(`Marco Normativo: ${risk.legalReference}`, pageWidth - margin * 2 - 6) : [];
+    const legalLines = risk.legalReference ? doc.splitTextToSize(`Marco Normativo & Gaceta: ${risk.legalReference}${risk.officialSource ? ` (${risk.officialSource})` : ''}`, pageWidth - margin * 2 - 6) : [];
+    const jurLines = risk.jurisdiction ? doc.splitTextToSize(`Jurisdicción & Vigencia: ${risk.jurisdiction} • Revisión: ${risk.lastReviewed || '2026'}`, pageWidth - margin * 2 - 6) : [];
     const draftLines = risk.suggestedDrafting ? doc.splitTextToSize(`Redacción Sugerida: "${risk.suggestedDrafting}"`, pageWidth - margin * 2 - 6) : [];
 
     const headerHeight = Math.max(titleLines.length * 4.2, 6);
-    const totalHeight = headerHeight + descLines.length * 3.8 + mitLines.length * 3.8 + locLines.length * 3.8 + quoteLines.length * 3.5 + legalLines.length * 3.5 + draftLines.length * 3.5 + 14;
+    const totalHeight = headerHeight + descLines.length * 3.8 + mitLines.length * 3.8 + locLines.length * 3.8 + quoteLines.length * 3.5 + legalLines.length * 3.5 + jurLines.length * 3.5 + draftLines.length * 3.5 + 14;
     checkPageBreak(totalHeight);
 
     // Título a la izquierda ajustado
@@ -561,6 +582,13 @@ export function exportToPDF(audit: ContractAudit): void {
       doc.setTextColor(26, 54, 93);
       doc.text(legalLines, margin + 4, y);
       y += legalLines.length * 3.5;
+    }
+
+    if (jurLines.length > 0) {
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(71, 85, 105);
+      doc.text(jurLines, margin + 4, y);
+      y += jurLines.length * 3.5;
     }
 
     doc.setFont('helvetica', 'bold');

@@ -323,6 +323,24 @@ async def get_risk_rules():
     """
     return risk_engine.get_rules_info()
 
+@app.get("/v1/regulatory/catalog", response_model=list[RiskRuleInfo], summary="Consultar matriz completa de trazabilidad, organismos y vigencia")
+async def get_regulatory_catalog():
+    """
+    Retorna la matriz oficial de gobernanza regulatoria con procedencia, organismo emisor,
+    jurisdicción territorial/extraterritorial, vigencia 2026 y criterios de aplicabilidad.
+    """
+    return risk_engine.get_rules_info()
+
+@app.get("/v1/regulatory/catalog/{rule_id}", response_model=RiskRuleInfo, summary="Consultar ficha técnica regulatoria unitaria por ID de regla")
+async def get_regulatory_rule_detail(rule_id: str):
+    """
+    Retorna la ficha técnica detallada y verificada de una directriz o regla específica.
+    """
+    for r in risk_engine.get_rules_info():
+        if r.rule_id.upper() == rule_id.upper():
+            return r
+    raise HTTPException(status_code=404, detail=f"Regla regulatoria '{rule_id}' no encontrada en el catálogo.")
+
 @app.get("/v1/normativas-vigentes", summary="Consultar compendio oficial de normativas y estatutos vigentes (2026)")
 async def get_normativas_vigentes():
     """

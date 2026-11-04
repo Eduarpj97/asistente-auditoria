@@ -16,7 +16,8 @@ import {
   Search,
   Layers,
 } from 'lucide-react';
-import { ContractAudit } from '../types/audit';
+import { ContractAudit, AuditedClause, RiskItem } from '../types/audit';
+import { RegulatoryProvenanceModal } from './RegulatoryProvenanceModal';
 
 interface AuditResultViewProps {
   audit: ContractAudit;
@@ -38,6 +39,7 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
   const [activeTab, setActiveTab] = useState<'clauses' | 'risks' | 'deadlines' | 'missing'>('clauses');
   const [isExportingWord, setIsExportingWord] = useState(false);
   const [isExportingPDF, setIsExportingPDF] = useState(false);
+  const [selectedRegulatoryItem, setSelectedRegulatoryItem] = useState<AuditedClause | RiskItem | null>(null);
 
   // Filter clauses
   const filteredClauses = audit.clauses.filter((clause) => {
@@ -513,10 +515,18 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
                           </span>
                         </div>
                         {clause.legalReference && (
-                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/[0.03] dark:bg-white/[0.06] text-[#86868b] text-[11px] font-mono">
-                            <Scale className="w-3 h-3 text-[#0071e3]" />
+                          <button
+                            type="button"
+                            onClick={() => setSelectedRegulatoryItem(clause)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-[#0071e3] dark:text-[#2997ff] text-[11px] font-mono transition-colors cursor-pointer border border-blue-500/20"
+                            title="Consultar Ficha Técnica de Validez, Jurisdicción y Vigencia 2026"
+                          >
+                            <Scale className="w-3 h-3 text-[#0071e3] dark:text-[#2997ff]" />
                             <span>{clause.legalReference}</span>
-                          </div>
+                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-blue-500/20 font-bold uppercase tracking-wider">
+                              Ficha Técnica
+                            </span>
+                          </button>
                         )}
                       </div>
 
@@ -605,10 +615,18 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
                       </div>
                     )}
                     {risk.legalReference && (
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/[0.03] dark:bg-white/[0.06] text-[#86868b] text-[11px] font-mono">
-                        <Scale className="w-3 h-3 text-[#0071e3]" />
+                      <button
+                        type="button"
+                        onClick={() => setSelectedRegulatoryItem(risk)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-[#0071e3] dark:text-[#2997ff] text-[11px] font-mono transition-colors cursor-pointer border border-blue-500/20"
+                        title="Consultar Ficha Técnica de Validez, Jurisdicción y Vigencia 2026"
+                      >
+                        <Scale className="w-3 h-3 text-[#0071e3] dark:text-[#2997ff]" />
                         <span>{risk.legalReference}</span>
-                      </div>
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-blue-500/20 font-bold uppercase tracking-wider">
+                          Ficha Técnica
+                        </span>
+                      </button>
                     )}
                   </div>
                 )}
@@ -679,6 +697,14 @@ export const AuditResultView: React.FC<AuditResultViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* Modal Interactivo de Ficha Técnica Regulatoria */}
+      {selectedRegulatoryItem && (
+        <RegulatoryProvenanceModal
+          item={selectedRegulatoryItem}
+          onClose={() => setSelectedRegulatoryItem(null)}
+        />
+      )}
     </div>
   );
 };

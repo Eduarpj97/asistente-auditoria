@@ -32,6 +32,13 @@ class RiskFinding(BaseModel):
     normative_reference: str = Field(..., description="Referencia a marco legal, estándar o política aplicable")
     matched_snippet: Optional[str] = Field(None, description="Fragmento de texto relevante donde se detectó el riesgo")
     chunk_index: Optional[int] = Field(None, description="Índice del segmento/chunk asociado")
+    issuing_body: Optional[str] = Field("Organismo Regulatorio Competente", description="Organismo o entidad oficial emisora")
+    jurisdiction: Optional[str] = Field("Jurisdicción Nacional Ordinaria", description="Ámbito territorial o extraterritorial")
+    official_source: Optional[str] = Field(None, description="Gaceta, boletín oficial, tratado o estándar ISO oficial")
+    last_reviewed: Optional[str] = Field("2026-10-15", description="Fecha de última revisión de vigencia normativa")
+    normative_status: Optional[str] = Field("VIGENTE", description="Estado formal de vigencia")
+    applicability_criteria: Optional[str] = Field(None, description="Criterio jurídico de aplicabilidad y pertinencia al contrato")
+    official_url: Optional[str] = Field(None, description="Enlace web oficial para consulta de la norma")
 
 class CategoryScore(BaseModel):
     category: RegulatoryCategory = Field(..., description="Categoría regulatoria")
@@ -59,6 +66,13 @@ class RiskRuleInfo(BaseModel):
     normative_reference: str
     description: str
     remediation: str
+    issuing_body: Optional[str] = "Organismo Regulatorio Competente"
+    jurisdiction: Optional[str] = "Jurisdicción Nacional Ordinaria"
+    official_source: Optional[str] = None
+    last_reviewed: Optional[str] = "2026-10-15"
+    normative_status: Optional[str] = "VIGENTE"
+    applicability_criteria: Optional[str] = None
+    official_url: Optional[str] = None
 
 class EvaluateRiskRequest(BaseModel):
     text: Optional[str] = Field(None, description="Texto completo a evaluar")
