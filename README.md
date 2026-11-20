@@ -1,10 +1,16 @@
 ﻿# Audiflow — Asistente de Auditoría y Cumplimiento Regulatorio para Contratos
 
-[![Estado](https://img.shields.io/badge/Estado-MVP%20Funcional%20Listo-success)](#)
+[![Estado](https://img.shields.io/badge/Estado-Sustentado%20%7C%20Listo%20para%20Entrega-success)](#)
 [![Docker](https://img.shields.io/badge/Docker-Hub%20Registrado-blue?logo=docker)](https://hub.docker.com/r/eduarpj/asistente-auditoria)
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI%20%7C%20Python-009688?logo=fastapi)](https://fastapi.tiangolo.com)
-[![Ollama](https://img.shields.io/badge/IA%20Engine-Llama%203.1%208B%20(Oracle%20Cloud)-orange)](#)
-[![Licencia](https://img.shields.io/badge/Uso-Académico%20%2F%20Grado-green)](#)
+[![Ollama](https://img.shields.io/badge/IA%20Engine-Llama%203.1%208B%20(Ollama)-orange)](#)
+[![Licencia](https://img.shields.io/badge/Uso-Académico%20%2F%20Unicaribe-green)](#)
+
+> [!NOTE]
+> 📖 **Guía Oficial para el Jurado Evaluador y Docentes**:  
+> Consulte el manual de instalación, ejecución y conexión de servidor LLM propio en:  
+> • [GUIA_INSTITUCIONAL_DESPLIEGUE.md](GUIA_INSTITUCIONAL_DESPLIEGUE.md) (Formato interactivo Markdown)  
+> • [INSTRUCCIONES_EJECUCION.txt](INSTRUCCIONES_EJECUCION.txt) (Formato texto plano para Bloc de Notas)
 
 ---
 
@@ -90,7 +96,7 @@ python main.py
 - [x] **Paso 7**: Despliegue de Ollama con Llama 3.1 8B en servidor Oracle Cloud VPS (Ampere A1, 24GB RAM).
 - [x] **Paso 10**: Construcción de la API Backend en FastAPI con scoring de 14 reglas normativas (\pi/main.py\).
 - [x] **Paso 11**: Construcción del Dashboard Frontend interactivo (\pi/static/index.html\).
-- [ ] **Paso 12**: Pruebas finales integradas con contratos reales y preparación de sustentación.
+- [x] **Paso 12**: Pruebas finales integradas con contratos reales, arnés anti-alucinaciones y sustentación formal de grado aprobada.
 
 ---
 

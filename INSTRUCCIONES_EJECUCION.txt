@@ -1,0 +1,196 @@
+================================================================================
+AUDIFLOW - SISTEMA DE AUDITORÍA Y CUMPLIMIENTO REGULATORIO PARA CONTRATOS
+================================================================================
+Proyecto de Grado para Titulación Profesional en Ingeniería de Software
+Institución: Corporación Universitaria del Caribe - Cecar / Unicaribe
+Autores:
+  • Eduardo Pedroza Jiménez
+  • Antonio Manuel Guerrero
+  • Daysmir Hugueth
+Director / Asesor: PhD Jorge Rudas
+Versión: 1.2.0 Final (Listo para Evaluación y Despliegue Institucional)
+Fecha de Entrega: Noviembre de 2026
+================================================================================
+
+--------------------------------------------------------------------------------
+1. NOTA IMPORTANTE PARA EL COMITÉ EVALUADOR Y DOCENTES
+--------------------------------------------------------------------------------
+Durante el desarrollo del proyecto y la sustentación formal, el motor de Inteligencia
+Artificial (Llama 3.1 8B) estuvo alojado en un servidor privado VPS en Oracle Cloud
+propiedad del estudiante (IP 132.145.198.1).
+
+Al haberse completado la sustentación académica, dicho servidor personal ha sido
+APAGADO. Por esta razón, el código fuente de Audiflow ha sido configurado y
+preparado para ser 100% INDEPENDIENTE, permitiendo a la institución evaluadora
+ejecutarlo de tres (3) maneras distintas según sus recursos:
+
+  [OPCIÓN A - RECOMENDADA]: Conectar su propio servidor de IA local (Ollama).
+  [OPCIÓN B]: Conectar un servidor de IA en red institucional o en la nube.
+  [OPCIÓN C - MODO AUTÓNOMO]: Ejecutar el sistema sin servidor de IA. Audiflow
+              incluye un motor determinístico en Python con 14 reglas normativas
+              (RGPD, SARLAFT, Anticorrupción, ISO 27001) que audita, calcula el
+              semáforo de riesgo y emite el dictamen sin dependencias externas.
+
+Asimismo, la base de datos funciona de forma nativa y automática sobre SQLite local
+(data/audiflow_local.db), por lo que NO se requiere crear cuentas en Supabase ni
+tener conexión a internet para probar la aplicación al 100%.
+
+--------------------------------------------------------------------------------
+2. REQUISITOS PREVIOS DEL SISTEMA
+--------------------------------------------------------------------------------
+Para ejecutar la plataforma en un computador o servidor institucional se requiere:
+  1. Python 3.10 o superior (recomendado 3.11).
+  2. Node.js versión 18 LTS o 20 LTS (incluye npm).
+  3. (Opcional si usa Docker): Docker Desktop o Docker Engine con Docker Compose.
+  4. (Opcional para inferencia IA local): Ollama instalado (https://ollama.com).
+
+--------------------------------------------------------------------------------
+3. OPCIÓN A: CÓMO CONFIGURAR SU PROPIO SERVIDOR DE IA CON OLLAMA (RECOMENDADO)
+--------------------------------------------------------------------------------
+Si la institución desea evaluar la inferencia semántica con IA de última generación:
+
+Paso 3.1: Descargar e instalar Ollama
+  • Windows / Mac / Linux: Descargue el instalador desde: https://ollama.com/download
+
+Paso 3.2: Descargar el modelo de lenguaje
+  Abra una terminal (PowerShell, CMD o Terminal) y ejecute:
+      ollama run llama3.1:8b
+
+  (Nota para equipos con recursos moderados o sin GPU dedicada):
+  Puede descargar un modelo más ligero como:
+      ollama run llama3.2:3b
+
+Paso 3.3: Verificar que Ollama está activo
+  Abra en su navegador la dirección:
+      http://127.0.0.1:11434
+  Debe mostrar el mensaje: "Ollama is running".
+
+Paso 3.4: Configuración en Audiflow
+  En la carpeta raíz del proyecto, el archivo .env ya está preconfigurado con:
+      OLLAMA_BASE_URL=http://127.0.0.1:11434
+      OLLAMA_MODEL=llama3.1:8b   (o el modelo que haya descargado)
+
+--------------------------------------------------------------------------------
+4. PUESTA EN MARCHA DEL BACKEND (API REST FASTAPI)
+--------------------------------------------------------------------------------
+El backend gestiona la extracción de texto (OCR / PyPDF), el motor de reglas
+normativas, el arnés anti-alucinaciones y la conexión con el motor de IA.
+
+Paso 4.1: Abrir terminal y ubicarse en la carpeta 'api'
+  powershell:
+      cd asistente-auditoria/api
+
+Paso 4.2: Crear y activar un entorno virtual de Python (Recomendado)
+  En Windows:
+      python -m venv venv
+      .\venv\Scripts\Activate.ps1
+  En Linux / Mac:
+      python3 -m venv venv
+      source venv/bin/activate
+
+Paso 4.3: Instalar las dependencias de Python
+      pip install -r requirements.txt
+
+Paso 4.4: Iniciar el servidor FastAPI
+      python main.py
+
+Paso 4.5: Comprobación de disponibilidad
+  • El backend iniciará en: http://127.0.0.1:8000
+  • Diagnóstico del sistema: http://127.0.0.1:8000/v1/health
+  • Documentación interactiva Swagger: http://127.0.0.1:8000/docs
+
+--------------------------------------------------------------------------------
+5. PUESTA EN MARCHA DEL FRONTEND (REACT 19 + VITE)
+--------------------------------------------------------------------------------
+El frontend es una aplicación de página única (SPA) moderna, reactiva, accesible
+y con visualización dinámica de semáforos de riesgo, dictamen legal y calendario.
+
+Paso 5.1: Abrir una SEGUNDA terminal y ubicarse en la carpeta 'frontend'
+      cd asistente-auditoria/frontend
+
+Paso 5.2: Instalar dependencias de Node.js
+      npm install
+
+Paso 5.3: Iniciar el servidor de desarrollo Vite
+      npm run dev
+
+Paso 5.4: Abrir la aplicación en el navegador web
+  Abra su navegador (Chrome, Edge, Firefox) en:
+      http://localhost:3000
+  (o la URL indicada en consola, usualmente http://localhost:5173 o :3000).
+
+--------------------------------------------------------------------------------
+6. ALTERNATIVA DE DESPLIEGUE EN 1 SOLO PASO CON DOCKER
+--------------------------------------------------------------------------------
+Si la institución prefiere ejecutar todo mediante contenedores sin instalar
+herramientas locales:
+
+Paso 6.1: En la raíz del proyecto, ejecute:
+      docker-compose up -d --build
+
+Paso 6.2: Acceder a la plataforma:
+  • Frontend web en producción: http://localhost:8080
+  • Para detener el contenedor: docker-compose down
+
+--------------------------------------------------------------------------------
+7. BASE DE DATOS Y PERSISTENCIA (100% AUTÓNOMA)
+--------------------------------------------------------------------------------
+Audiflow cuenta con un esquema de base de datos híbrido y dual:
+  • Persistencia Primaria Automática: Base de datos SQLite local ubicada en:
+      data/audiflow_local.db
+    Guarda automáticamente los usuarios, sesiones, historiales de auditoría y
+    cláusulas detectadas. Funciona inmediatamente sin requerir internet.
+  • Persistencia Centralizada (Opcional): Si la institución desea sincronizar
+    con un servidor Supabase institucional, solo debe especificar las variables
+    SUPABASE_URL y SUPABASE_PUBLISHABLE_KEY en el archivo .env.
+
+--------------------------------------------------------------------------------
+8. CÓMO PROBAR LA AUDITORÍA CON LOS CONTRATOS DE MUESTRA INCLUIDOS
+--------------------------------------------------------------------------------
+En la carpeta 'data/samples/' del proyecto se incluyen contratos reales y de prueba:
+  1. data/samples/contrato_auditoria_muestra.pdf
+     (Contrato de prestación de servicios con cláusulas de riesgo, penalidades,
+     plazos de preaviso y ausencia de protección de datos).
+  2. data/samples/contrato_sla_software.txt
+     (Acuerdo de nivel de servicio SLA de software SaaS con exclusión de culpa grave).
+
+Procedimiento de prueba en la interfaz web:
+  1. En la pantalla de bienvenida de Audiflow, ingrese con las credenciales demo
+     o cree un usuario nuevo (los datos se almacenan en SQLite local).
+  2. Diríjase a la sección "Auditoría de Contratos" o arrastre el archivo PDF
+     directamente en el área de carga.
+  3. Haga clic en "Iniciar Auditoría".
+  4. En menos de 45 segundos el sistema presentará:
+     • Semáforo de Riesgo Global (Rojo / Amarillo / Verde).
+     • Resumen Ejecutivo comprensible para gerencia y Pymes.
+     • Desglose por Tipología Jurídica del contrato.
+     • Tabla de Cláusulas Críticas con Cita Textual verificada por el arnés.
+     • Recomendaciones de Negociación y Redacción para adenda.
+     • Detección de Hitos y Alertas de Vencimiento de Preavisos.
+  5. Puede exportar el dictamen pericial completo en PDF o Word con un solo clic.
+
+--------------------------------------------------------------------------------
+9. EJECUCIÓN DE PRUEBAS AUTOMATIZADAS DE CALIDAD DE SOFTWARE
+--------------------------------------------------------------------------------
+Para verificar ante el jurado evaluador que el sistema cumple con los más altos
+estándares de ingeniería de software (100% de pruebas aprobadas):
+
+  A) Pruebas Unitarias del Motor Backend (19 tests aprobados al 100%):
+     En la carpeta raíz o 'api':
+         pytest api/test_risk_engine.py -v
+
+  B) Pruebas de Componentes Frontend (4 tests aprobados al 100%):
+     En la carpeta 'frontend':
+         npm run test:components
+
+  C) Pruebas Funcionales End-to-End con Playwright (3 suites aprobadas al 100%):
+     En la carpeta 'frontend':
+         npm run test:e2e
+
+--------------------------------------------------------------------------------
+10. CONTACTO Y SOPORTE
+--------------------------------------------------------------------------------
+Para cualquier inquietud técnica, inquietud sobre el código o asistencia:
+  • Eduardo Pedroza Jiménez (Ingeniería de Software - Unicaribe)
+  • Repositorio Oficial en GitHub: https://github.com/Eduarpj97/asistente-auditoria
+================================================================================

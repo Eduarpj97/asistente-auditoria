@@ -8,10 +8,10 @@ import urllib.error
 from typing import Dict, Any, Optional, Tuple, List
 import re
 
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://132.145.198.1:11434")
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:8b")
-SSH_KEY_PATH = os.getenv("OLLAMA_SSH_KEY", r"C:\Users\Eduardo\Desktop\Ollama 3.1.key")
-VPS_HOST = os.getenv("OLLAMA_VPS_HOST", "132.145.198.1")
+SSH_KEY_PATH = os.getenv("OLLAMA_SSH_KEY", "")
+VPS_HOST = os.getenv("OLLAMA_VPS_HOST", "127.0.0.1")
 VPS_USER = os.getenv("OLLAMA_VPS_USER", "ubuntu")
 NORMATIVAS_URL = os.getenv("NORMATIVAS_URL", "https://audiflow-audit.abbynex.site/normativas/normativa_auditoria_vigente_2026.md")
 
@@ -103,7 +103,7 @@ class LLMAuditService:
             return self._active_url
 
         # 3. Iniciar túnel SSH seguro si existe la clave en el equipo
-        if os.path.exists(SSH_KEY_PATH):
+        if SSH_KEY_PATH and os.path.exists(SSH_KEY_PATH):
             try:
                 cmd = [
                     "ssh.exe",
