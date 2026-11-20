@@ -10,7 +10,11 @@ Autores:
 Director / Asesor: PhD Jorge Rudas
 Versión: 1.2.0 Final (Listo para Evaluación y Despliegue Institucional)
 Fecha de Entrega: Noviembre de 2026
-Documento Formal de Guía: GUIA_INSTITUCIONAL_DESPLIEGUE.docx
+Documentos Oficiales de Entrega:
+  • Audiflow_Informe_Escrito_Version_Final.docx (Informe Escrito y Memoria Técnica Final)
+  • GUIA_INSTITUCIONAL_DESPLIEGUE.docx (Guía de Despliegue y Conexión de Servidor)
+  • Presentacion_Audiflow_Final.pptx (Diapositivas oficiales de sustentación)
+  • Audiflow_Proyecto_Completo_vFinal.zip (Código fuente limpio empaquetado)
 ================================================================================
 
 --------------------------------------------------------------------------------
