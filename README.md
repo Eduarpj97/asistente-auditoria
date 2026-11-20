@@ -9,7 +9,7 @@
 > [!NOTE]
 > 📖 **Guía Oficial para el Jurado Evaluador y Docentes**:  
 > Consulte el manual de instalación, ejecución y conexión de servidor LLM propio en:  
-> • [GUIA_INSTITUCIONAL_DESPLIEGUE.md](GUIA_INSTITUCIONAL_DESPLIEGUE.md) (Formato interactivo Markdown)  
+> • [GUIA_INSTITUCIONAL_DESPLIEGUE.docx](GUIA_INSTITUCIONAL_DESPLIEGUE.docx) (Manual formal en documento Word)  
 > • [INSTRUCCIONES_EJECUCION.txt](INSTRUCCIONES_EJECUCION.txt) (Formato texto plano para Bloc de Notas)
 
 ---
